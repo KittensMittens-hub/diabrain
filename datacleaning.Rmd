@@ -9,6 +9,47 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(readxl)
+library(dplyr)
+data <- read_excel("diabrain.xlsx")
+```
+```{r}
+library(skimr)
+```
+1. в датасете оказалось 224 столбца, не смогла их удалить через код, удалила вручную 
+2. Перекодировка лечения (у пропущенных GLP) 
+1 - метформин
+2,3,7 - SGLT2i
+4,51,52,6,5,8 - GLP1
+
+2. возраст  - нашла NA, преобразовала в numeric, минимум 35, максимум 75 - выбросов нет 
+
+
+```{r}
+skim(data)
+```
+```{r}
+data <- data %>%
+  mutate(Treatment = recode(Treatment,
+    "1" = "метформин",
+    "2" = "SGLT2i",
+    "3" = "SGLT2i", 
+    "7" = "SGLT2i",
+    "4" = "GLP1",
+    "51" = "GLP1",
+    "52" = "GLP1",
+    "6" = "GLP1",
+    "5" = "GLP1",
+    "8" = "GLP1"
+  )) 
+
+
+data$Age[is.na(data$Age)] <- "69"
+data <- data %>% 
+  mutate(Age = as.numeric(Age))
+```
+
 ## R Markdown
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
