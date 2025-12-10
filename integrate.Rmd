@@ -1,0 +1,247 @@
+---
+title: "integrate_diabrain"
+author: "Natalya"
+date: "2025-12-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r cars}
+library(readxl)
+library(dplyr)
+library(gtsummary)
+```
+```{r}
+data <- read_excel("diabrain.xlsx")
+
+data <- data %>%
+  mutate(Treatment = recode(Treatment,
+                            "1" = "метформин",
+                            "2" = "SGLT2i",
+                            "3" = "SGLT2i", 
+                            "7" = "SGLT2i",
+                            "4" = "GLP1",
+                            "51" = "GLP1",
+                            "52" = "GLP1",
+                            "6" = "GLP1",
+                            "5" = "GLP1",
+                            "8" = "GLP1"
+  )) 
+
+
+data$Age[is.na(data$Age)] <- "69"
+data <- data %>% 
+  mutate(Age = as.numeric(Age))
+
+data$Treatment <- as.factor(data$Treatment)
+data$Sex <- as.factor(data$Sex)
+
+
+data$`HbA1c level` <- as.factor(data$`HbA1c level`)
+
+tbl <- data %>%
+  tbl_summary(include = `HbA1c 0`)
+tbl
+
+replacement_df <- data.frame(
+  ID = c(136, 149, 154, 163, 215, 231, 238),
+  New_DM_Duration = c(10, 8, 16, 8, 6, 10, 7)
+)
+
+duration <- summary(data$`DM duration`)
+print(duration)
+
+
+data <- data %>%
+  left_join(replacement_df, by = "ID") %>%
+  mutate(`DM duration` = ifelse(is.na(`DM duration`) & !is.na(New_DM_Duration), 
+                                New_DM_Duration, 
+                                `DM duration`)) %>%
+  select(-New_DM_Duration) 
+
+data$`DM duration`[data$`DM duration` == 0] <- 1
+
+HH <- summary(data$`HbA1c 0`)
+print(HH)
+
+data$`HbA1c 0`[data$`HbA1c 0` == 45327.0] <- 6
+data$`HbA1c 0`[data$`HbA1c 0` == NA] <- 10
+
+data <- data %>%
+  mutate(`HbA1c 0` = replace(`HbA1c 0`, is.na(`HbA1c 0`), 10))
+
+HH3 <- summary(data$`HbA1c 3`)
+print(HH3)
+
+data$`HbA1c 6` <- as.numeric(data$`HbA1c 6`)
+
+HH6 <- summary(data$`HbA1c 6`)
+print(HH6)
+
+data$`HbA1c 9` <- as.numeric(data$`HbA1c 9`)
+
+data$`HbA1c 9`[data$`HbA1c 9` == 45296.0] <- 5
+data$`HbA1c 9`[data$`HbA1c 9` == 45298.0] <- 6.5
+
+HH9 <- summary(data$`HbA1c 9`)
+print(HH9)
+
+data$`HbA1c 12` <- as.numeric(data$`HbA1c 12`)
+data$`HbA1c 12`[data$`HbA1c 12` == 45298.0] <- 6.0
+HH12 <- summary(data$`HbA1c 12`)
+print(HH12)
+
+NSE0 <- summary(data$`NSE 0`)
+print(NSE0)
+
+NSE6 <- summary(data$`NSE 6`)
+print(NSE6)
+
+NSE12 <- summary(data$`NSE 12`)
+print(NSE12)
+
+Lc0 <- summary(data$`NSE 12`)
+print(NSE12)
+
+
+data$`S100 0`[data$`S100 0` == 0.02] <- 20
+data$`S100 0`[data$`S100 0` == 0.03] <- 30
+
+data$`S100 3`[data$`S100 3` == 0.03] <- 30
+
+data$`S100 6`[data$`S100 6` == 0.05] <- 50
+
+data$`S100 12`[data$`S100 6` == 0.01] <- 10
+
+data$`LDL 0` <- as.numeric(data$`LDL 0`)
+
+data$`TG 0` <- as.numeric(data$`TG 0`)
+
+library(gtsummary)
+
+
+table_one <- data %>%
+  tbl_summary(
+    include = c(
+      Treatment, Age, Sex, `HbA1c level`, `DM duration`,
+      `HbA1c 0`, `HbA1c 3`, `HbA1c 6`, `HbA1c 9`, `HbA1c 12`,
+      `NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`,
+      `Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`,
+      `S100 0`, `S100 3`, `S100 6`, `S100 12`,
+      `Cholesterol 0`, `Cholesterol 6`, `Cholesterol 12`,
+      `LDL 0`, `LDL 6`, `LDL 12`,
+      `TG 0`, `TG 6`, `TG 12`
+    ),
+    by = Treatment,
+    type = list(
+      `Cholesterol 6` ~ "continuous",
+      `Cholesterol 12` ~ "continuous",
+      `LDL 6` ~ "continuous",
+      `TG 6` ~ "continuous"
+    ),
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd}) [{min}, {max}], N={N_nonmiss}",
+      all_categorical() ~ "{n} ({p}%), N={N_nonmiss}"
+    ),
+    missing = "no"
+  ) %>%
+  add_overall() %>%
+  bold_labels()
+
+print(table_one)
+```
+```{r}
+
+file_path <- "diabrain.xlsx"
+df_brain <- read_excel(file_path)
+
+moca_start <- 72
+df_moca <- df_brain[, moca_start:ncol(df_brain)]
+
+df_moca <- df_brain %>%
+  select(Treatment, moca_start:ncol(df_brain))
+
+df_moca <- df_moca %>%
+  mutate(Treatment = recode(Treatment,
+                            "1" = "метформин",
+                            "2" = "SGLT2i",
+                            "3" = "SGLT2i", 
+                            "7" = "SGLT2i",
+                            "4" = "GLP1",
+                            "51" = "GLP1",
+                            "52" = "GLP1",
+                            "6" = "GLP1",
+                            "5" = "GLP1",
+                            "8" = "GLP1"
+  )) 
+
+df_moca <- df_moca %>%
+  mutate(across(
+    where(is.character) & !matches("^Treatment$"),
+    ~ suppressWarnings(as.numeric(gsub(",", ".", .)))
+  ))
+
+df_num <- df_moca[, sapply(df_moca, is.numeric)]
+
+stats_df <- data.frame(
+  variable = names(df_num),
+  mean = sapply(df_num, function(x) round(mean(x, na.rm = TRUE), 2)),
+  sd   = sapply(df_num, function(x) round(sd(x,   na.rm = TRUE), 2)),
+  min  = sapply(df_num, function(x) round(min(x,  na.rm = TRUE), 2)),
+  max  = sapply(df_num, function(x) round(max(x,  na.rm = TRUE), 2)),
+  missing_n = sapply(df_num, function(x) sum(is.na(x))),
+  missing_pct = sapply(df_num, function(x) round(mean(is.na(x)) * 100, 2)),
+  stringsAsFactors = FALSE
+)
+
+stats_df
+
+write.csv(stats_df,
+          "stats_overall.csv",
+          row.names = FALSE,
+          fileEncoding = "UTF-8")
+
+safe_stat <- function(x, fun) {
+  x <- x[!is.na(x)]
+  if (length(x) == 0) return(NA_real_)
+  fun(x)
+}
+
+stats_by_treat <- df_moca %>%
+  pivot_longer(
+    cols = -Treatment,
+    names_to  = "scale",
+    values_to = "value"
+  ) %>%
+  group_by(Treatment, scale) %>%
+  summarise(
+    n           = sum(!is.na(value)),
+    missing_n   = sum(is.na(value)),
+    missing_pct = round(100 * missing_n / (n + missing_n), 1),
+    
+    mean   = round(safe_stat(value, mean),   2),
+    sd     = round(safe_stat(value, sd),     2),
+    median = round(safe_stat(value, median), 2),
+    iqr    = round(safe_stat(value, IQR),    2),
+    min    = round(safe_stat(value, min),    2),
+    max    = round(safe_stat(value, max),    2),
+    
+    .groups = "drop"
+  )
+
+
+stats_by_treat
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
