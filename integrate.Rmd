@@ -132,4 +132,50 @@ if (length(hrt_index) > 0) {
 }
 ```
 
+# Часть 2 
+```{r}
+#Замена некорректных значений
+data$`Сardiac ischemia`[data$ID == 152] <- 0
+
+data$Alcohol[data$ID == 205] <- 1
+
+data$Anticoagulants[data$ID == 266] <- NA
+
+data$`Hypertension duration`[data$ID %in% c(127, 179, 181, 222)] <- NA
+
+data$Hypertension[data$ID == 215] <- 1
+
+data$`Hypertension duration`[data$ID %in% c(142, 168)] <- NA
+
+
+#Изменения типов переменных
+data <- data %>% 
+  mutate(
+    across(c(HRT, Hypertension, `Сardiac ischemia`, Stroke, Polineuropathy, Retinopathy, Smoking, Alcohol, `ACE inhibitors`, ARB, BB, `Calcium channel blockers`, Aspirin, Diuretics, Statin, Anticoagulants), ~as.factor(.)),
+    `Hypertension duration` = as.numeric(`Hypertension duration`)
+    )
+
+
+#Пропущенные значения длительности гипертонии заменяем на 0 если диагноза гипертонии не стоит
+data <- data %>% 
+  mutate(
+    `Hypertension duration` = case_when(
+      Hypertension == 0 & is.na(`Hypertension duration`) ~ 0,
+      TRUE ~ `Hypertension duration`
+    )
+  )
+
+```
+```{r}
+data_2 <- subset(data, select = c("ID", "HRT", "Hypertension", 
+                                 "Hypertension duration", "Сardiac ischemia", 
+                                 "Stroke", "Polineuropathy", "Retinopathy", 
+                                 "Smoking", "Alcohol", "ACE inhibitors", 
+                                 "ARB", "BB", "Calcium channel blockers", 
+                                 "Aspirin", "Diuretics", "Statin", 
+                                 "Anticoagulants"))
+```
+
+# Часть 3 
+
 
