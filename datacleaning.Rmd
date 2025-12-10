@@ -12,8 +12,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(readxl)
 library(dplyr)
+library(tidyverse)
 data <- read_excel("diabrain.xlsx")
 ```
+
 ```{r}
 library(skimr)
 ```
@@ -29,6 +31,7 @@ library(skimr)
 ```{r}
 skim(data)
 ```
+
 ```{r}
 data <- data %>%
   mutate(Treatment = recode(Treatment,
@@ -50,22 +53,114 @@ data <- data %>%
   mutate(Age = as.numeric(Age))
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+# Очистка данных столбцы HRT (заместительная гормональная терапия) до Anticoagulants включительно 
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+В процессе анализа данных найдены следующие ошибки:
+1) 152 пациент в Сardiac ischemia имеет значение 3
+2) 205 пациент в Alcohol иммет значение 2
+3) 266 пациет в Anticoagulants имеет -
+4) 127, 179, 181, 222 пациенты в Hypertension duration имеют значения 'NAP'
+5) 215 пациент Hypertension = 0 (нет гипертонии), но Hypertension duration = 10
+6) 142, 168 пациенты Hypertension = 1 (есть гипертония), но Hypertension duration = 0
 
-```{r cars}
-summary(cars)
+
+В процессе подготовки базу данных изменили следущим образом:
+
+1) Заменили значение Сardiac ischemia пациента 152 с 3 на 0 (нет ишемической болезни сердца)
+2) Заменили значение Alcohol пациента 205 с 2 на 1 (употребление алкоголя)
+3) Заменили значени Anticoagulants 266 пациента с '-' на NA (пропущенное значение)
+4) Заменили значения Hypertension duration 127, 179, 181 и 222 пациентов с 'NAP' на NA (пропущенные значения)
+5) Заменили значение Hypertension 215 пациента с 0 на 1 (есть гипертония)
+6) Заменили значения Hypertension duration 142 и 168 пациентов с 0 на NA
+
+7) Переменные HRT, Hypertension, `Сardiac ischemia`, Stroke, Polineuropathy, Retinopathy, Smoking, Alcohol, `ACE inhibitors`, ARB, BB, `Calcium channel blockers`, Aspirin, Diuretics, Statin, Anticoagulants перведены в фактор
+8) Переменная Hypertension duration преведена в числовой (numeric) тип
+
+9) При Hypertension равной 0 (отсутствие гипертонии) пропущенные значения Hypertension duration заменили на 0
+
+```{r}
+
+#Замена некорректных значений
+data$`Сardiac ischemia`[data$ID == 152] <- 0
+
+data$Alcohol[data$ID == 205] <- 1
+
+data$Anticoagulants[data$ID == 266] <- NA
+
+data$`Hypertension duration`[data$ID %in% c(127, 179, 181, 222)] <- NA
+
+data$Hypertension[data$ID == 215] <- 1
+
+data$`Hypertension duration`[data$ID %in% c(142, 168)] <- NA
+
+
+#Изменения типов переменных
+data <- data %>% 
+  mutate(
+    across(c(HRT, Hypertension, `Сardiac ischemia`, Stroke, Polineuropathy, Retinopathy, Smoking, Alcohol, `ACE inhibitors`, ARB, BB, `Calcium channel blockers`, Aspirin, Diuretics, Statin, Anticoagulants), ~as.factor(.)),
+    `Hypertension duration` = as.numeric(`Hypertension duration`)
+    )
+
+
+#Пропущенные значения длительности гипертонии заменяем на 0 если диагноза гипертонии не стоит
+data <- data %>% 
+  mutate(
+    `Hypertension duration` = case_when(
+      Hypertension == 0 & is.na(`Hypertension duration`) ~ 0,
+      TRUE ~ `Hypertension duration`
+    )
+  )
+
 ```
 
-## Including Plots
+Проверка очищенной части данных
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+data %>% 
+  select(33:49) %>% 
+  summary()
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Описательная статистика переменных
+
+```{r}
+statistic <- list(
+  'NA' = ~sum(is.na(.)),
+  'n' = ~sum(!is.na(.)),
+  'mean' = ~round(mean(., na.rm = T), 1),
+  'median' = ~median(., na.rm = T) ,
+  'sd' = ~sd(., na.rm = T) %>% round(2),
+  'Q1' = ~quantile(., .25, na.rm = TRUE),
+  'Q3' = ~quantile(., .75, na.rm = TRUE), 
+  'Min' = ~min(., na.rm = T),
+  'max' = ~max(., na.rm = T)) 
+
+data %>%
+  select(Treatment, `Hypertension duration`) %>% 
+  group_by(Treatment) %>% 
+  summarise( 
+    across(where(is.numeric), statistic)) %>% 
+  pivot_longer(!Treatment, names_to = c('Variable', 'Statistic'), names_sep = '_', values_to = 'Value') %>% 
+  pivot_wider(names_from = 'Variable',  values_from = 'Value')
+  
+  
+```
+
+```{r}
+statistic2 <- 
+  list(
+  'NA' = ~sum(is.na(.)),
+  'n' = ~sum(!is.na(.))
+  )
+
+data %>%
+  select(Treatment, c(33:49)) %>% 
+  group_by(Treatment) %>% 
+  summarise( 
+    across(where(is.factor), statistic2)) %>% 
+  pivot_longer(!Treatment, names_to = c('Variable', 'Statistic'), names_sep = '_', values_to = 'Value') 
+# %>% 
+#   pivot_wider(names_from = 'Variable',  values_from = 'Value')
+```
+
