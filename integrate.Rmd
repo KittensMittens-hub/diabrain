@@ -197,5 +197,105 @@ df_p3 <- df_p3 %>%
          `GFR 6` = if_else(`ID` == 198, 68, `GFR 6`), # уточнено значение по ПМД
          `GFR 12` = if_else(`ID` == 250, NA, `GFR 6`)) # уточнено значение по ПМД
 summary(df_p3) #посмотрим данные еще раз
+
+df_p3$ID <- as.numeric(df_p3$ID)
+```
+
+# Часть 4 
+```{r}
+file_path <- "diabrain.xlsx"
+df_brain <- read_excel(file_path)
+
+moca_start <- 72
+df_moca <- df_brain[, moca_start:ncol(df_brain)]
+
+df_moca <- df_brain %>%
+  select(ID, Treatment, moca_start:ncol(df_brain))
+
+df_moca <- df_moca %>%
+  mutate(Treatment = recode(Treatment,
+                            "1" = "метформин",
+                            "2" = "SGLT2i",
+                            "3" = "SGLT2i", 
+                            "7" = "SGLT2i",
+                            "4" = "GLP1",
+                            "51" = "GLP1",
+                            "52" = "GLP1",
+                            "6" = "GLP1",
+                            "5" = "GLP1",
+                            "8" = "GLP1"
+  )) 
+
+df_moca <- df_moca %>%
+  mutate(across(
+    where(is.character) & !matches("^Treatment$"),
+    ~ suppressWarnings(as.numeric(gsub(",", ".", .)))
+  ))
+
+df_num <- df_moca[, sapply(df_moca, is.numeric)]
+
+stats_df <- data.frame(
+  variable = names(df_num),
+  mean = sapply(df_num, function(x) round(mean(x, na.rm = TRUE), 2)),
+  sd   = sapply(df_num, function(x) round(sd(x,   na.rm = TRUE), 2)),
+  min  = sapply(df_num, function(x) round(min(x,  na.rm = TRUE), 2)),
+  max  = sapply(df_num, function(x) round(max(x,  na.rm = TRUE), 2)),
+  missing_n = sapply(df_num, function(x) sum(is.na(x))),
+  missing_pct = sapply(df_num, function(x) round(mean(is.na(x)) * 100, 2)),
+  stringsAsFactors = FALSE
+)
+
+stats_df
+
+write.csv(stats_df,
+          "stats_overall.csv",
+          row.names = FALSE,
+          fileEncoding = "UTF-8")
+
+safe_stat <- function(x, fun) {
+  x <- x[!is.na(x)]
+  if (length(x) == 0) return(NA_real_)
+  fun(x)
+}
+
+stats_by_treat <- df_moca %>%
+  pivot_longer(
+    cols = -Treatment,
+    names_to  = "scale",
+    values_to = "value"
+  ) %>%
+  group_by(Treatment, scale) %>%
+  summarise(
+    n           = sum(!is.na(value)),
+    missing_n   = sum(is.na(value)),
+    missing_pct = round(100 * missing_n / (n + missing_n), 1),
+    
+    mean   = round(safe_stat(value, mean),   2),
+    sd     = round(safe_stat(value, sd),     2),
+    median = round(safe_stat(value, median), 2),
+    iqr    = round(safe_stat(value, IQR),    2),
+    min    = round(safe_stat(value, min),    2),
+    max    = round(safe_stat(value, max),    2),
+    
+    .groups = "drop"
+  )
+
+
+stats_by_treat
+```
+```{r}
+df_moca1 <- df_moca %>%
+  select(-Treatment)
+```
+
+
+```{r}
+merged_data <- data_1 %>%
+  left_join(data_2, by = "ID") %>%
+  left_join(df_p3, by = "ID") %>% 
+  left_join(df_moca, by = "ID")
+```
+```{r}
+rlang::last_trace()
 ```
 
