@@ -2,19 +2,28 @@
 title: "integrate"
 author: "Natalya"
 date: "2025-12-10"
-output: html_document
+output: 
+  html_document:
+    number_sections: true
+    code_folding: hide
+    toc: true
+    toc_float: true
 ---
+
 # Часть 1  
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 ```{r}
 library(readxl)
 library(dplyr)
 library(gtsummary)
 library(tidyr)
 library(gtsummary)
+library(flextable)
 ```
+
 ```{r}
 data <- read_excel("diabrain.xlsx")
 
@@ -295,7 +304,223 @@ merged_data <- data_1 %>%
   left_join(df_p3, by = "ID") %>% 
   left_join(df_moca, by = "ID")
 ```
+
 ```{r}
-rlang::last_trace()
+# rlang::last_trace()
 ```
+
+# Описательная статистика
+
+## Описательная статистика количественных перменных
+```{r}
+#сосздаем лист со статистикой для количественных признаков
+statistic <- list(
+  'Количество NA' = ~sum(is.na(.x)) %>% as.character(),
+  'Количество наблюдений' = ~sum(!is.na(.x)) %>% as.character(),
+  'Среднее' = ~round(mean(.x, na.rm = T), 1) %>% as.character(),
+  'Медиана' = ~round(median(.x, na.rm = T),1) %>% as.character(),
+  'Стандатрное отклонение' = ~sd(.x, na.rm = T) %>% round(2) %>% as.character(),
+  '25-75 квартили' = ~paste0(round(quantile(.x, .25, na.rm = TRUE), 1), ' - ',
+                             round(quantile(.x, .75, na.rm = TRUE)), 1),
+  'Мин-макс значение' = ~paste0(round(min(.x, na.rm = T),1), ' - ', round(max(.x, na.rm = T)), 1) %>% as.character()
+  )
+```
+
+
+```{r}
+
+#Функция создания DF по всем перменным
+allvariablstatic <- function(selection) {
+  merged_data %>%
+  select(all_of({{selection}})) %>% 
+  summarise( 
+    across(everything(), statistic)
+    ) %>% 
+  pivot_longer(everything(), names_to = c('Variable', 'Statistic'), names_sep = '_', values_to = 'Valuetotal') %>% 
+  as_grouped_data(groups = 'Variable')
+}
+
+#Функция создания DF по группам лечения
+variablstatic <- function(tratgr, selection) {
+  merged_data %>%
+  filter(Treatment.x == {{tratgr}}) %>% 
+  select(Treatment.x, all_of({{selection}})) %>% 
+  summarise( 
+    across(!Treatment.x, statistic)
+    ) %>% 
+  pivot_longer(everything(), names_to = c('Variable', 'Statistic'), names_sep = '_', values_to = 'Valueyes') %>% 
+  as_grouped_data(groups = 'Variable')
+}
+
+#функция объединения DF
+databinding <- function(total, metamorf, GLP1, SGLT2i) {
+  {{total}} %>% 
+  bind_cols({{metamorf}}[,3]) %>% 
+  bind_cols({{GLP1}}[,3]) %>% 
+  bind_cols({{SGLT2i}}[,3]) %>% 
+  as_grouped_data(groups = 'Variable') %>% 
+  filter(!if_all(everything(), is.na))
+}
+
+```
+
+
+```{r}
+#Статистика по демографическим и др переменным
+
+colsanaliz <- c("Age", "DM duration", 'Hypertension duration')
+
+demogrdatatotal <- allvariablstatic(selection = colsanaliz) 
+demogrdatametamorf <- variablstatic(tratgr = 'метформин', selection = colsanaliz)
+demogrdataGLP1 <- variablstatic(tratgr = 'GLP1', selection = colsanaliz)
+demogrdataSGLT2i <- variablstatic(tratgr = 'SGLT2i', selection = colsanaliz)
+
+demogranalisis<- databinding(total = demogrdatatotal, metamorf = demogrdatametamorf, 
+                            GLP1 = demogrdataGLP1, SGLT2i = demogrdataSGLT2i)
+
+as_flextable(demogranalisis) %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_header_labels(Statistic = 'Параметр', Valuetotal = 'Среди всех пациентов', ...4 = 'В группе метформина', ...5 = 'В группе GLP1', ...6 = 'В группе SGLT2i') %>%
+  set_table_properties(layout = 'autofit', width = 1) %>% 
+  set_caption('Таблица - Описательная статистика демографических и др признаков')
+
+
+```
+
+
+```{r}
+#Статистика лабораторных показателей
+
+colsanaliz <- merged_data %>%
+  select(matches("HbA1c \\d|NSE|Lchains|S100|Cholesterol|LDL|TG")) %>%
+  names()
+  
+
+labdatatotal <- allvariablstatic(selection = colsanaliz) 
+labdatametamorf <- variablstatic(tratgr = 'метформин', selection = colsanaliz)
+labdataGLP1 <- variablstatic(tratgr = 'GLP1', selection = colsanaliz)
+labdataSGLT2i <- variablstatic(tratgr = 'SGLT2i', selection = colsanaliz)
+
+labanalisis <- databinding(total = labdatatotal, metamorf = labdatametamorf, 
+                            GLP1 = labdataGLP1, SGLT2i = labdataSGLT2i)
+
+as_flextable(labanalisis) %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_header_labels(Statistic = 'Параметр', Valuetotal = 'Среди всех пациентов', ...4 = 'В группе метформина', ...5 = 'В группе GLP1', ...6 = 'В группе SGLT2i') %>%
+  set_table_properties(layout = 'autofit', width = 1) %>% 
+  set_caption('Таблица - Описательная статистика лабораторных показателей')
+
+
+```
+
+
+```{r}
+#Статистика нейропсихологичных показателей
+
+colsanaliz <- merged_data %>%
+  select(matches("MOCA|MMSE|Memory|Frontal|Watch|Shulte|Beck|Spielberg|Beck")) %>%
+  names()
+  
+
+neurodatatotal <- allvariablstatic(selection = colsanaliz) 
+neurodatametamorf <- variablstatic(tratgr = 'метформин', selection = colsanaliz)
+neurodataGLP1 <- variablstatic(tratgr = 'GLP1', selection = colsanaliz)
+neurodataSGLT2i <- variablstatic(tratgr = 'SGLT2i', selection = colsanaliz)
+
+neuroanalisis <- databinding(total = neurodatatotal, metamorf = neurodatametamorf, 
+                            GLP1 = neurodataGLP1, SGLT2i = neurodataSGLT2i)
+
+as_flextable(neuroanalisis) %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_header_labels(Statistic = 'Параметр', Valuetotal = 'Среди всех пациентов', ...4 = 'В группе метформина', ...5 = 'В группе GLP1', ...6 = 'В группе SGLT2i') %>%
+  set_table_properties(layout = 'autofit', width = 1) %>% 
+  set_caption('Таблица - Описательная статистика нейропсихологичных показателей')
+
+
+```
+
+
+```{r}
+#Статистика антропометрических показателей
+
+colsanaliz <- merged_data %>%
+  select(matches("Height|Weight|BMI")) %>%
+  names()
+  
+
+anthropodatatotal <- allvariablstatic(selection = colsanaliz) 
+anthropodatametamorf <- variablstatic(tratgr = 'метформин', selection = colsanaliz)
+anthropodataGLP1 <- variablstatic(tratgr = 'GLP1', selection = colsanaliz)
+anthropodataSGLT2i <- variablstatic(tratgr = 'SGLT2i', selection = colsanaliz)
+
+anthropoanalisis <- databinding(total = anthropodatatotal, metamorf = anthropodatametamorf, 
+                            GLP1 = anthropodataGLP1, SGLT2i = anthropodataSGLT2i)
+
+as_flextable(anthropoanalisis) %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_header_labels(Statistic = 'Параметр', Valuetotal = 'Среди всех пациентов', ...4 = 'В группе метформина', ...5 = 'В группе GLP1', ...6 = 'В группе SGLT2i') %>%
+  set_table_properties(layout = 'autofit', width = 1) %>% 
+  set_caption('Таблица - Описательная статистика антропометрических показателей')
+
+
+```
+
+
+
+
+```{r}
+#Статистика показателей функции почек
+
+colsanaliz <- merged_data %>%
+  select(matches("GFR|Creatinine")) %>%
+  names()
+  
+
+kidneysdatatotal <- allvariablstatic(selection = colsanaliz) 
+kidneysdatametamorf <- variablstatic(tratgr = 'метформин', selection = colsanaliz)
+kidneysdataGLP1 <- variablstatic(tratgr = 'GLP1', selection = colsanaliz)
+kidneysdataSGLT2i <- variablstatic(tratgr = 'SGLT2i', selection = colsanaliz)
+
+kidneysanalisis <- databinding(total = kidneysdatatotal, metamorf = kidneysdatametamorf, 
+                            GLP1 = kidneysdataGLP1, SGLT2i = kidneysdataSGLT2i)
+
+as_flextable(kidneysanalisis) %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_header_labels(Statistic = 'Параметр', Valuetotal = 'Среди всех пациентов', ...4 = 'В группе метформина', ...5 = 'В группе GLP1', ...6 = 'В группе SGLT2i') %>%
+  set_table_properties(layout = 'autofit', width = 1) %>% 
+  set_caption('Таблица - Описательная статистика показателей функции почек')
+
+
+```
+
+
+## Описательная статистика качественных признаков
+
+```{r}
+merged_data %>% 
+  select(where(is.factor)) %>% 
+  tbl_summary(
+    by = Treatment.x,
+    type = all_continuous() ~ "categorical",
+    statistic = all_categorical() ~ "{n} ({p}%)",
+    label = )%>% 
+  add_overall()
+```
+
+
 
