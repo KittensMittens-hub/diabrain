@@ -295,7 +295,5 @@ merged_data <- data_1 %>%
   left_join(df_p3, by = "ID") %>% 
   left_join(df_moca, by = "ID")
 ```
-```{r}
-rlang::last_trace()
-```
+
 
