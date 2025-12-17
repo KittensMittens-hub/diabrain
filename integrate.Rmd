@@ -14,6 +14,7 @@ library(dplyr)
 library(gtsummary)
 library(tidyr)
 library(gtsummary)
+library(ggplot2)
 ```
 ```{r}
 data <- read_excel("diabrain.xlsx")
@@ -297,3 +298,255 @@ merged_data <- data_1 %>%
 ```
 
 
+# Визуализация
+
+## Распределение по полу в группах терапии
+
+```{r}
+ggplot(merged_data, aes(x = Treatment.x, fill = Sex)) +
+  geom_bar(width = 0.5, position = position_dodge(width = 0.6), alpha = 0.6) +
+  labs(
+    x = "Группа терапии",
+    y = "Число пациентов",
+    title = "Распределение пациентов по полу в группах терапии") +
+  scale_fill_manual(name   = "Пол",
+                      labels = c("0" = "Женщины",
+                                 "1"   = "Мужчины"),
+                      values = c("0" = "deeppink",
+                                 "1" = "deepskyblue2"))+
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Распределение по длительности сахарного диабета в группах терапии
+
+```{r}
+ggplot(merged_data, aes(y = `DM duration`, x = Treatment.x)) +
+  geom_boxplot(width = 0.5, position = position_dodge(width = 0.6), alpha = 0.6) +
+  labs(
+    x = "Группа терапии",
+    y = "Длительность сахарного диабета, лет",
+    title = "Распределение пациентов по длительности сахарного диабета в группах терапии") +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Гликированный гемоглобин по визитам
+
+```{r}
+HbA1c_long <- merged_data %>%
+  select(`HbA1c 0`, `HbA1c 3`, `HbA1c 6`, `HbA1c 9`, `HbA1c 12`) %>% 
+  pivot_longer(cols = c(`HbA1c 0`, `HbA1c 3`, `HbA1c 6`, `HbA1c 9`, `HbA1c 12`),
+               names_to = "month",
+               values_to = "HbA1c") %>%
+  mutate(month = gsub("HbA1c ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "9", "12")))
+
+ggplot(HbA1c_long, aes(x = month, y = HbA1c)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Гликированный гемоглобин, %",
+    title = "Гликированный гемоглобин по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Нейронспецифическая енолаза (нг/мл) по визитам
+
+```{r}
+NSE_long <- merged_data %>%
+  select(`NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`) %>% 
+  pivot_longer(cols = c(`NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`),
+               names_to = "month",
+               values_to = "NSE") %>%
+  mutate(month = gsub("NSE ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "12")))
+
+ggplot(NSE_long, aes(x = month, y = NSE)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Нейронспецифическая енолаза, нг/мл",
+    title = "Значения показателя Нейронспецифическая енолаза по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Легкие цепи нейрофиламента (нг/мл) по визитам
+
+```{r}
+Lchains_long <- merged_data %>%
+  select(`Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`) %>% 
+  pivot_longer(cols = c(`Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`),
+               names_to = "month",
+               values_to = "Lchains") %>%
+  mutate(month = gsub("Lchains ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "12")))
+
+ggplot(Lchains_long, aes(x = month, y = Lchains)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Легкие цепи нейрофиламента, нг/мл",
+    title = "Значения показателя Легкие цепи нейрофиламента по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Белок S 100 (мкг/мл) по визитам
+
+```{r}
+S100_long <- merged_data %>%
+  select(`S100 0`, `S100 3`, `S100 6`, `S100 12`) %>% 
+  pivot_longer(cols = c(`S100 0`, `S100 3`, `S100 6`, `S100 12`),
+               names_to = "month",
+               values_to = "S100") %>%
+  mutate(month = gsub("S100 ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "12")))
+
+ggplot(S100_long, aes(x = month, y = S100)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Белок S 100, мкг/мл",
+    title = "Значения показателя Белок S 100 по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Общий холестерин (ммоль/л) по визитам
+
+```{r}
+Cholesterol_long <- merged_data %>%
+  select(`Cholesterol 0`, `Cholesterol 6`, `Cholesterol 12`) %>% 
+  pivot_longer(cols = c(`Cholesterol 0`, `Cholesterol 6`, `Cholesterol 12`),
+               names_to = "month",
+               values_to = "Cholesterol") %>%
+  mutate(month = gsub("Cholesterol ", "", month),
+         month = factor(month, levels = c("0", "6", "12")))
+
+ggplot(Cholesterol_long, aes(x = month, y = Cholesterol)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Общий холестерин, ммоль/л",
+    title = "Значения показателя Общий холестерин по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Липопротеины низкой плотности (ммоль/л) по визитам
+
+```{r}
+LDL_long <- merged_data %>%
+  select(`LDL 0`, `LDL 6`, `LDL 12`) %>% 
+  pivot_longer(cols = c(`LDL 0`, `LDL 6`, `LDL 12`),
+               names_to = "month",
+               values_to = "LDL") %>%
+  mutate(month = gsub("LDL ", "", month),
+         month = factor(month, levels = c("0", "6", "12")))
+
+ggplot(LDL_long, aes(x = month, y = LDL)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Липопротеины низкой плотности, ммоль/л",
+    title = "Значения показателя Липопротеины низкой плотности по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Триглицериды (ммоль/л) по визитам
+
+```{r}
+TG_long <- merged_data %>%
+  select(`TG 0`, `TG 6`, `TG 12`) %>% 
+  pivot_longer(cols = c(`TG 0`, `TG 6`, `TG 12`),
+               names_to = "month",
+               values_to = "TG") %>%
+  mutate(month = gsub("TG ", "", month),
+         month = factor(month, levels = c("0", "6", "12")))
+
+ggplot(TG_long, aes(x = month, y = TG)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Триглицериды, ммоль/л",
+    title = "Значения показателя Триглицериды по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## ИМТ по визитам
+
+```{r}
+BMI_long <- merged_data %>%
+  select(`BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`) %>% 
+  pivot_longer(cols = c(`BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`),
+               names_to = "month",
+               values_to = "BMI") %>%
+  mutate(month = gsub("BMI ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "9", "12")))
+
+ggplot(BMI_long, aes(x = month, y = BMI)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "ИМТ, кг/м²",
+    title = "Распределение ИМТ по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Креатинин по визитам
+
+```{r}
+creat_long <- merged_data %>%
+  select(`Creatinine 0`, `Creatinine 6`, `Creatinine 12`) %>% 
+  pivot_longer(cols = c(`Creatinine 0`, `Creatinine 6`, `Creatinine 12`),
+               names_to = "month",
+               values_to = "Creatinine") %>%
+  mutate(month = gsub("Creatinine ", "", month),
+         month = factor(month, levels = c("0", "6", "12")))
+
+ggplot(creat_long, aes(x = month, y = Creatinine)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Креатинин, мкмоль/л",
+    title = "Распределение креатинина по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## СКФ по визитам
+
+```{r}
+GFR_long <- merged_data %>%
+  select(`GFR0`, `GFR 6`, `GFR 12`) %>% 
+  pivot_longer(cols = c(`GFR0`, `GFR 6`, `GFR 12`),
+               names_to = "month",
+               values_to = "GFR") %>%
+  mutate(month = gsub("[^0-9]", "", month),
+         month = factor(month, levels = c("0", "6", "12")))
+
+ggplot(GFR_long, aes(x = month, y = GFR)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "СКФ, кг/м²/1.73",
+    title = "Распределение СКФ по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
