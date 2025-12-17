@@ -1,19 +1,40 @@
 ---
+<<<<<<< HEAD
 title: "integrate_diabrain"
 author: "Natalya"
 date: "2025-12-10"
 output: html_document
 ---
 
+=======
+title: "integrate"
+author: "Natalya"
+date: "2025-12-10"
+output: 
+  html_document:
+    number_sections: true
+    code_folding: hide
+    toc: true
+    toc_float: true
+---
+
+# Часть 1  
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r cars}
+
+```{r}
 library(readxl)
 library(dplyr)
 library(gtsummary)
+library(tidyr)
+library(gtsummary)
+library(flextable)
 ```
+
+
 ```{r}
 data <- read_excel("diabrain.xlsx")
 
@@ -120,6 +141,7 @@ data$`LDL 0` <- as.numeric(data$`LDL 0`)
 
 data$`TG 0` <- as.numeric(data$`TG 0`)
 
+<<<<<<< HEAD
 library(gtsummary)
 
 
@@ -153,8 +175,89 @@ table_one <- data %>%
 
 print(table_one)
 ```
-```{r}
 
+```{r}
+hrt_index <- which(colnames(data) == "HRT")
+
+if (length(hrt_index) > 0) {
+
+  data_1 <- data[, 1:(hrt_index - 1), drop = FALSE]
+} else {
+  warning("Столбец 'HRT' не найден")
+  data_1 <- data
+}
+```
+
+# Часть 2 
+
+```{r}
+#Замена некорректных значений
+data$`Сardiac ischemia`[data$ID == 152] <- 0
+
+data$Alcohol[data$ID == 205] <- 1
+
+data$Anticoagulants[data$ID == 266] <- NA
+
+data$`Hypertension duration`[data$ID %in% c(127, 179, 181, 222)] <- NA
+
+data$Hypertension[data$ID == 215] <- 1
+
+data$`Hypertension duration`[data$ID %in% c(142, 168)] <- NA
+
+
+#Изменения типов переменных
+data <- data %>% 
+  mutate(
+    across(c(HRT, Hypertension, `Сardiac ischemia`, Stroke, Polineuropathy, Retinopathy, Smoking, Alcohol, `ACE inhibitors`, ARB, BB, `Calcium channel blockers`, Aspirin, Diuretics, Statin, Anticoagulants), ~as.factor(.)),
+    `Hypertension duration` = as.numeric(`Hypertension duration`)
+    )
+
+
+#Пропущенные значения длительности гипертонии заменяем на 0 если диагноза гипертонии не стоит
+data <- data %>% 
+  mutate(
+    `Hypertension duration` = case_when(
+      Hypertension == 0 & is.na(`Hypertension duration`) ~ 0,
+      TRUE ~ `Hypertension duration`
+    )
+  )
+
+```
+```{r}
+data_2 <- subset(data, select = c("ID", "HRT", "Hypertension", 
+                                 "Hypertension duration", "Сardiac ischemia", 
+                                 "Stroke", "Polineuropathy", "Retinopathy", 
+                                 "Smoking", "Alcohol", "ACE inhibitors", 
+                                 "ARB", "BB", "Calcium channel blockers", 
+                                 "Aspirin", "Diuretics", "Statin", 
+                                 "Anticoagulants"))
+```
+
+# Часть 3 
+
+```{r}
+df_p3 <- read_excel("diabrain.xlsx")
+df_p3 <- df_p3 %>%
+  select(1, 50:71, -65) %>% #столбец 65 странный, удалить?
+  mutate(across(c(2:12, 17:22), ~ round(as.numeric(.), 2)),  # преобразуем переменные в numeric или factor в соответствии со спецификацией
+         across(c(1, 13:16), as.factor)) 
+summary(df_p3) #посмотрим данные
+df_p3 <- df_p3 %>%
+  mutate(Height = if_else(Height == 1, NA, Height), # у пациента с номером 215 рост 1, заменяем на NA
+         `BMI 0` = if_else(`BMI 0` == 0, NA, `BMI 0`), # у пациента с номером 215 ИМТ 0, заменяем на NA
+         `BMI 6` = if_else(`BMI 6` == 0, NA, `BMI 6`),
+         `BMI 12` = if_else(`BMI 12` == 45770, 23.40, `BMI 12`), # значение было записано, как дата, при преобразовании в формат numeric сломалось
+         `Creatinine 6` = if_else(`ID` == 198, 111, `Creatinine 6`), # у пациента 198 есть значения креатинина 1,11, заменяем на 111
+         `GFR 6` = if_else(`ID` == 184, 101, `GFR 6`), # уточнено значение по ПМД
+         `GFR 6` = if_else(`ID` == 198, 68, `GFR 6`), # уточнено значение по ПМД
+         `GFR 12` = if_else(`ID` == 250, NA, `GFR 6`)) # уточнено значение по ПМД
+summary(df_p3) #посмотрим данные еще раз
+
+df_p3$ID <- as.numeric(df_p3$ID)
+```
+
+# Часть 4 
+```{r}
 file_path <- "diabrain.xlsx"
 df_brain <- read_excel(file_path)
 
@@ -162,7 +265,8 @@ moca_start <- 72
 df_moca <- df_brain[, moca_start:ncol(df_brain)]
 
 df_moca <- df_brain %>%
-  select(Treatment, moca_start:ncol(df_brain))
+  select(ID, Treatment, moca_start:ncol(df_brain))
+
 
 df_moca <- df_moca %>%
   mutate(Treatment = recode(Treatment,
@@ -236,12 +340,233 @@ stats_by_treat <- df_moca %>%
 stats_by_treat
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+df_moca1 <- df_moca %>%
+  select(-Treatment)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+merged_data <- data_1 %>%
+  left_join(data_2, by = "ID") %>%
+  left_join(df_p3, by = "ID") %>% 
+  left_join(df_moca, by = "ID")
+```
+
+
+# Описательная статистика
+
+## Описательная статистика количественных перменных
+```{r}
+#сосздаем лист со статистикой для количественных признаков
+statistic <- list(
+  'Количество NA' = ~sum(is.na(.x)) %>% as.character(),
+  'Количество наблюдений' = ~sum(!is.na(.x)) %>% as.character(),
+  'Среднее' = ~round(mean(.x, na.rm = T), 1) %>% as.character(),
+  'Медиана' = ~round(median(.x, na.rm = T),1) %>% as.character(),
+  'Стандатрное отклонение' = ~sd(.x, na.rm = T) %>% round(2) %>% as.character(),
+  '25-75 квартили' = ~paste0(round(quantile(.x, .25, na.rm = TRUE), 1), ' - ',
+                             round(quantile(.x, .75, na.rm = TRUE)), 1),
+  'Мин-макс значение' = ~paste0(round(min(.x, na.rm = T),1), ' - ', round(max(.x, na.rm = T)), 1) %>% as.character()
+  )
+```
+
+
+```{r}
+#Функция создания DF по всем перменным
+allvariablstatic <- function(selection) {
+  merged_data %>%
+  select(all_of({{selection}})) %>% 
+  summarise( 
+    across(everything(), statistic)
+    ) %>% 
+  pivot_longer(everything(), names_to = c('Variable', 'Statistic'), names_sep = '_', values_to = 'Valuetotal') %>% 
+  as_grouped_data(groups = 'Variable')
+}
+
+#Функция создания DF по группам лечения
+variablstatic <- function(tratgr, selection) {
+  merged_data %>%
+  filter(Treatment.x == {{tratgr}}) %>% 
+  select(Treatment.x, all_of({{selection}})) %>% 
+  summarise( 
+    across(!Treatment.x, statistic)
+    ) %>% 
+  pivot_longer(everything(), names_to = c('Variable', 'Statistic'), names_sep = '_', values_to = 'Valueyes') %>% 
+  as_grouped_data(groups = 'Variable')
+}
+
+#функция объединения DF
+databinding <- function(total, metamorf, GLP1, SGLT2i) {
+  {{total}} %>% 
+  bind_cols({{metamorf}}[,3]) %>% 
+  bind_cols({{GLP1}}[,3]) %>% 
+  bind_cols({{SGLT2i}}[,3]) %>% 
+  as_grouped_data(groups = 'Variable') %>% 
+  filter(!if_all(everything(), is.na))
+}
+
+
+```
+
+
+```{r}
+#Статистика по демографическим и др переменным
+
+colsanaliz <- c("Age", "DM duration", 'Hypertension duration')
+
+demogrdatatotal <- allvariablstatic(selection = colsanaliz) 
+demogrdatametamorf <- variablstatic(tratgr = 'метформин', selection = colsanaliz)
+demogrdataGLP1 <- variablstatic(tratgr = 'GLP1', selection = colsanaliz)
+demogrdataSGLT2i <- variablstatic(tratgr = 'SGLT2i', selection = colsanaliz)
+
+demogranalisis<- databinding(total = demogrdatatotal, metamorf = demogrdatametamorf, 
+                            GLP1 = demogrdataGLP1, SGLT2i = demogrdataSGLT2i)
+
+as_flextable(demogranalisis) %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_header_labels(Statistic = 'Параметр', Valuetotal = 'Среди всех пациентов', ...4 = 'В группе метформина', ...5 = 'В группе GLP1', ...6 = 'В группе SGLT2i') %>%
+  set_table_properties(layout = 'autofit', width = 1) %>% 
+  set_caption('Таблица - Описательная статистика демографических и др признаков')
+
+
+```
+
+
+```{r}
+#Статистика лабораторных показателей
+
+colsanaliz <- merged_data %>%
+  select(matches("HbA1c \\d|NSE|Lchains|S100|Cholesterol|LDL|TG")) %>%
+  names()
+  
+
+labdatatotal <- allvariablstatic(selection = colsanaliz) 
+labdatametamorf <- variablstatic(tratgr = 'метформин', selection = colsanaliz)
+labdataGLP1 <- variablstatic(tratgr = 'GLP1', selection = colsanaliz)
+labdataSGLT2i <- variablstatic(tratgr = 'SGLT2i', selection = colsanaliz)
+
+labanalisis <- databinding(total = labdatatotal, metamorf = labdatametamorf, 
+                            GLP1 = labdataGLP1, SGLT2i = labdataSGLT2i)
+
+as_flextable(labanalisis) %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_header_labels(Statistic = 'Параметр', Valuetotal = 'Среди всех пациентов', ...4 = 'В группе метформина', ...5 = 'В группе GLP1', ...6 = 'В группе SGLT2i') %>%
+  set_table_properties(layout = 'autofit', width = 1) %>% 
+  set_caption('Таблица - Описательная статистика лабораторных показателей')
+
+
+```
+
+
+```{r}
+#Статистика нейропсихологичных показателей
+
+colsanaliz <- merged_data %>%
+  select(matches("MOCA|MMSE|Memory|Frontal|Watch|Shulte|Beck|Spielberg|Beck")) %>%
+  names()
+  
+
+neurodatatotal <- allvariablstatic(selection = colsanaliz) 
+neurodatametamorf <- variablstatic(tratgr = 'метформин', selection = colsanaliz)
+neurodataGLP1 <- variablstatic(tratgr = 'GLP1', selection = colsanaliz)
+neurodataSGLT2i <- variablstatic(tratgr = 'SGLT2i', selection = colsanaliz)
+
+neuroanalisis <- databinding(total = neurodatatotal, metamorf = neurodatametamorf, 
+                            GLP1 = neurodataGLP1, SGLT2i = neurodataSGLT2i)
+
+as_flextable(neuroanalisis) %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_header_labels(Statistic = 'Параметр', Valuetotal = 'Среди всех пациентов', ...4 = 'В группе метформина', ...5 = 'В группе GLP1', ...6 = 'В группе SGLT2i') %>%
+  set_table_properties(layout = 'autofit', width = 1) %>% 
+  set_caption('Таблица - Описательная статистика нейропсихологичных показателей')
+
+
+```
+
+
+```{r}
+#Статистика антропометрических показателей
+
+colsanaliz <- merged_data %>%
+  select(matches("Height|Weight|BMI")) %>%
+  names()
+  
+
+anthropodatatotal <- allvariablstatic(selection = colsanaliz) 
+anthropodatametamorf <- variablstatic(tratgr = 'метформин', selection = colsanaliz)
+anthropodataGLP1 <- variablstatic(tratgr = 'GLP1', selection = colsanaliz)
+anthropodataSGLT2i <- variablstatic(tratgr = 'SGLT2i', selection = colsanaliz)
+
+anthropoanalisis <- databinding(total = anthropodatatotal, metamorf = anthropodatametamorf, 
+                            GLP1 = anthropodataGLP1, SGLT2i = anthropodataSGLT2i)
+
+as_flextable(anthropoanalisis) %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_header_labels(Statistic = 'Параметр', Valuetotal = 'Среди всех пациентов', ...4 = 'В группе метформина', ...5 = 'В группе GLP1', ...6 = 'В группе SGLT2i') %>%
+  set_table_properties(layout = 'autofit', width = 1) %>% 
+  set_caption('Таблица - Описательная статистика антропометрических показателей')
+
+
+```
+
+
+
+
+```{r}
+#Статистика показателей функции почек
+
+colsanaliz <- merged_data %>%
+  select(matches("GFR|Creatinine")) %>%
+  names()
+  
+
+kidneysdatatotal <- allvariablstatic(selection = colsanaliz) 
+kidneysdatametamorf <- variablstatic(tratgr = 'метформин', selection = colsanaliz)
+kidneysdataGLP1 <- variablstatic(tratgr = 'GLP1', selection = colsanaliz)
+kidneysdataSGLT2i <- variablstatic(tratgr = 'SGLT2i', selection = colsanaliz)
+
+kidneysanalisis <- databinding(total = kidneysdatatotal, metamorf = kidneysdatametamorf, 
+                            GLP1 = kidneysdataGLP1, SGLT2i = kidneysdataSGLT2i)
+
+as_flextable(kidneysanalisis) %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_header_labels(Statistic = 'Параметр', Valuetotal = 'Среди всех пациентов', ...4 = 'В группе метформина', ...5 = 'В группе GLP1', ...6 = 'В группе SGLT2i') %>%
+  set_table_properties(layout = 'autofit', width = 1) %>% 
+  set_caption('Таблица - Описательная статистика показателей функции почек')
+
+
+```
+
+
+## Описательная статистика качественных признаков
+
+```{r}
+merged_data %>% 
+  select(where(is.factor)) %>% 
+  tbl_summary(
+    by = Treatment.x,
+    type = all_continuous() ~ "categorical",
+    statistic = all_categorical() ~ "{n} ({p}%)",
+    label = )%>% 
+  add_overall()
+```
+
+
+
+>>>>>>> e78e37776ee61e790b2f03b177e480a1edf1a5b0
