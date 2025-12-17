@@ -1,12 +1,4 @@
 ---
-<<<<<<< HEAD
-title: "integrate_diabrain"
-author: "Natalya"
-date: "2025-12-10"
-output: html_document
----
-
-=======
 title: "integrate"
 author: "Natalya"
 date: "2025-12-10"
@@ -17,6 +9,7 @@ output:
     toc: true
     toc_float: true
 ---
+
 
 # Часть 1  
 
@@ -141,9 +134,8 @@ data$`LDL 0` <- as.numeric(data$`LDL 0`)
 
 data$`TG 0` <- as.numeric(data$`TG 0`)
 
-<<<<<<< HEAD
-library(gtsummary)
 
+library(gtsummary)
 
 table_one <- data %>%
   tbl_summary(
@@ -364,7 +356,7 @@ statistic <- list(
   'Количество наблюдений' = ~sum(!is.na(.x)) %>% as.character(),
   'Среднее' = ~round(mean(.x, na.rm = T), 1) %>% as.character(),
   'Медиана' = ~round(median(.x, na.rm = T),1) %>% as.character(),
-  'Стандатрное отклонение' = ~sd(.x, na.rm = T) %>% round(2) %>% as.character(),
+  'Стандартное отклонение' = ~sd(.x, na.rm = T) %>% round(2) %>% as.character(),
   '25-75 квартили' = ~paste0(round(quantile(.x, .25, na.rm = TRUE), 1), ' - ',
                              round(quantile(.x, .75, na.rm = TRUE)), 1),
   'Мин-макс значение' = ~paste0(round(min(.x, na.rm = T),1), ' - ', round(max(.x, na.rm = T)), 1) %>% as.character()
@@ -430,7 +422,7 @@ as_flextable(demogranalisis) %>%
   align(part = 'all', align = 'center') %>% 
   set_header_labels(Statistic = 'Параметр', Valuetotal = 'Среди всех пациентов', ...4 = 'В группе метформина', ...5 = 'В группе GLP1', ...6 = 'В группе SGLT2i') %>%
   set_table_properties(layout = 'autofit', width = 1) %>% 
-  set_caption('Таблица - Описательная статистика демографических и др признаков')
+  set_caption('Таблица 1 - Демография')
 
 
 ```
@@ -459,7 +451,7 @@ as_flextable(labanalisis) %>%
   align(part = 'all', align = 'center') %>% 
   set_header_labels(Statistic = 'Параметр', Valuetotal = 'Среди всех пациентов', ...4 = 'В группе метформина', ...5 = 'В группе GLP1', ...6 = 'В группе SGLT2i') %>%
   set_table_properties(layout = 'autofit', width = 1) %>% 
-  set_caption('Таблица - Описательная статистика лабораторных показателей')
+  set_caption('Таблица 2 - Описательная статистика лабораторных показателей')
 
 
 ```
@@ -568,5 +560,3 @@ merged_data %>%
 ```
 
 
-
->>>>>>> e78e37776ee61e790b2f03b177e480a1edf1a5b0
