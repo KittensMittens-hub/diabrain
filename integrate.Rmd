@@ -229,6 +229,12 @@ df_moca <- df_moca %>%
 
 df_moca <- df_moca %>%
   mutate(across(
+    c(`MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`),
+    ~ ifelse(. == 0, NA, .)
+  ))
+
+df_moca <- df_moca %>%
+  mutate(across(
     where(is.character) & !matches("^Treatment$"),
     ~ suppressWarnings(as.numeric(gsub(",", ".", .)))
   ))
@@ -661,22 +667,48 @@ ggplot(TG_long, aes(x = month, y = TG)) +
 
 ```{r}
 BMI_long <- merged_data %>%
-  select(`BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`) %>% 
+  select(Treatment.x, `BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`) %>% 
   pivot_longer(cols = c(`BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`),
                names_to = "month",
                values_to = "BMI") %>%
   mutate(month = gsub("BMI ", "", month),
          month = factor(month, levels = c("0", "3", "6", "9", "12")))
 
-ggplot(BMI_long, aes(x = month, y = BMI)) +
-  geom_boxplot() +
+ggplot(BMI_long, aes(x = month, y = BMI, fill = Treatment.x)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
   labs(
     x = "Месяц наблюдения",
     y = "ИМТ, кг/м²",
-    title = "Распределение ИМТ по визитам"
+    title = "Динамика ИМТ по визитам и группам терапии"
   ) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
+```
+
+## MOCA по визитам
+
+```{r}
+MOCA_long <- merged_data %>%
+  select(Treatment.x, `MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`) %>% 
+  pivot_longer(cols = c(`MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`),
+               names_to = "month",
+               values_to = "MOCA") %>%
+  mutate(month = gsub("MOCA ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "9", "12")))
+
+ggplot(MOCA_long, aes(x = month, y = MOCA, fill = Treatment.x)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Шкала MOCA, балл",
+    title = "Распределение баллов Монреальской шкалы по визитам в группах терапии"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.3))
 ```
 
 ## Креатинин по визитам
