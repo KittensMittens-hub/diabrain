@@ -312,24 +312,54 @@ ggplot(merged_data, aes(x = Treatment.x, fill = Sex)) +
   scale_fill_manual(name   = "Пол",
                       labels = c("0" = "Женщины",
                                  "1"   = "Мужчины"),
-                      values = c("0" = "deeppink",
-                                 "1" = "deepskyblue2"))+
-  theme_bw()+
+                      values = c("0" = "pink",
+                                 "1" = "blue"))+
+  theme_minimal()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
 ## Распределение по длительности сахарного диабета в группах терапии
 
 ```{r}
-ggplot(merged_data, aes(y = `DM duration`, x = Treatment.x)) +
-  geom_boxplot(width = 0.5, position = position_dodge(width = 0.6), alpha = 0.6) +
+ggplot(merged_data, aes(y = `DM duration`, x = Treatment.x, fill = Treatment.x)) +
+  geom_boxplot(width = 0.5, alpha = 0.8, color = "gray40", 
+               outlier.color = "gray30", outlier.shape = 16) +
+  scale_fill_brewer(palette = "Set2") + 
   labs(
     x = "Группа терапии",
     y = "Длительность сахарного диабета, лет",
-    title = "Распределение пациентов по длительности сахарного диабета в группах терапии") +
-  theme_bw()+
-  theme(plot.title = element_text(hjust = 0.5))
+    title = "Распределение пациентов по длительности сахарного диабета в группах терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "none",  
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank()
+  )
 ```
+
+```{r}
+ggplot(merged_data, aes(y = `Age`, x = Treatment.x, fill = Treatment.x)) +
+  geom_boxplot(width = 0.5, alpha = 0.8, color = "gray40", 
+               outlier.color = "gray30", outlier.shape = 16) +
+  scale_fill_brewer(palette = "Set2") + 
+  labs(
+    x = "Группа терапии",
+    y = "Возраст, лет",
+    title = "Распределение пациентов по возрасту в группах терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "none",  
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+
+
 
 ## Гликированный гемоглобин по визитам
 
@@ -353,11 +383,87 @@ ggplot(HbA1c_long, aes(x = month, y = HbA1c)) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
+```{r}
+HHbA1c_long <- merged_data %>%
+  select(Treatment.x, `HbA1c 0`, `HbA1c 3`, `HbA1c 6`, `HbA1c 9`, `HbA1c 12`) %>% 
+  pivot_longer(cols = c(`HbA1c 0`, `HbA1c 3`, `HbA1c 6`, `HbA1c 9`, `HbA1c 12`),
+               names_to = "month",
+               values_to = "HbA1c") %>%
+  mutate(month = gsub("HbA1c ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "9", "12")))
+
+ggplot(HbA1c_long, aes(x = month, y = HbA1c)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Гликированный гемоглобин, %",
+    title = "Гликированный гемоглобин по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+ggplot(HHbA1c_long, aes(x = month, y = HbA1c, fill = Treatment.x)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  labs(
+    x = "Месяц наблюдения",
+    y = "HbA1c, %",
+    title = "Динамика гликированного гемоглобина по визитам и группам терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "right",
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
+  )
+```
+
+
+
+
+
+```{r}
+HbA1c_summary <- HHbA1c_long %>%
+  group_by(Treatment.x, month) %>%
+  summarise(
+    mean_HbA1c = mean(HbA1c, na.rm = TRUE),
+    se = sd(HbA1c, na.rm = TRUE) / sqrt(n()),
+    .groups = 'drop'
+  )
+
+ggplot(HbA1c_summary, aes(x = month, y = mean_HbA1c, 
+                           group = Treatment.x, color = Treatment.x)) +
+  geom_line(size = 1) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean_HbA1c - se, ymax = mean_HbA1c + se), 
+                width = 0.1, size = 0.8) +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Гликированный гемоглобин, %",
+    title = "Динамика гликированного гемоглобина по визитам",
+    color = "Терапия"
+  ) +
+  theme_bw() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "bottom"
+  )
+```
+
+
+
+
+
 ## Нейронспецифическая енолаза (нг/мл) по визитам
 
 ```{r}
 NSE_long <- merged_data %>%
-  select(`NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`) %>% 
+  select(Treatment.x,`NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`) %>% 
   pivot_longer(cols = c(`NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`),
                names_to = "month",
                values_to = "NSE") %>%
@@ -368,18 +474,40 @@ ggplot(NSE_long, aes(x = month, y = NSE)) +
   geom_boxplot() +
   labs(
     x = "Месяц наблюдения",
-    y = "Нейронспецифическая енолаза, нг/мл",
-    title = "Значения показателя Нейронспецифическая енолаза по визитам"
+    y = "NSE, нг/мл",
+    title = "Уровень нейронспецифической енолазы по визитам"
   ) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+```{r}
+ggplot(NSE_long, aes(x = month, y = NSE, fill = Treatment.x)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  labs(
+    x = "Месяц наблюдения",
+    y = "NSE, нг/мл",
+    title = "Уровень нейронспецифической енолазы в группах терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "right",
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
+  )
 ```
 
 ## Легкие цепи нейрофиламента (нг/мл) по визитам
 
 ```{r}
 Lchains_long <- merged_data %>%
-  select(`Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`) %>% 
+  select(Treatment.x,`Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`) %>% 
   pivot_longer(cols = c(`Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`),
                names_to = "month",
                values_to = "Lchains") %>%
@@ -390,18 +518,40 @@ ggplot(Lchains_long, aes(x = month, y = Lchains)) +
   geom_boxplot() +
   labs(
     x = "Месяц наблюдения",
-    y = "Легкие цепи нейрофиламента, нг/мл",
+    y = "ЛЦН, нг/мл",
     title = "Значения показателя Легкие цепи нейрофиламента по визитам"
   ) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
+```{r}
+ggplot(Lchains_long, aes(x = month, y = Lchains, fill = Treatment.x)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  labs(
+    x = "Месяц наблюдения",
+    y = "ЛЦН, нг/мл",
+    title = "Уровень легких цепей нейрофиламента в группах терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "right",
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
+  )
+```
+
+
+
 ## Белок S 100 (мкг/мл) по визитам
 
 ```{r}
 S100_long <- merged_data %>%
-  select(`S100 0`, `S100 3`, `S100 6`, `S100 12`) %>% 
+  select(Treatment.x,`S100 0`, `S100 3`, `S100 6`, `S100 12`) %>% 
   pivot_longer(cols = c(`S100 0`, `S100 3`, `S100 6`, `S100 12`),
                names_to = "month",
                values_to = "S100") %>%
@@ -418,6 +568,28 @@ ggplot(S100_long, aes(x = month, y = S100)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
+```{r}
+ggplot(S100_long, aes(x = month, y = S100, fill = Treatment.x)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  labs(
+    x = "Месяц наблюдения",
+    y = "S100, мкг/мл",
+    title = "Уровень белка S100 в группах терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "right",
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
+  )
+```
+
+
+
 
 ## Общий холестерин (ммоль/л) по визитам
 
