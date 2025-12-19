@@ -15,6 +15,7 @@ library(gtsummary)
 library(tidyr)
 library(gtsummary)
 library(ggplot2)
+library(mice)
 ```
 ```{r}
 data <- read_excel("diabrain.xlsx")
@@ -722,3 +723,50 @@ ggplot(GFR_long, aes(x = month, y = GFR)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
+
+```{r fig.width = 8, fig.height = 10, results='asis'}
+
+data_renamed <- data
+
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 0"] <- "HbA1c_00"
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 3"] <- "HbA1c_03"
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 6"] <- "HbA1c_06"
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 9"] <- "HbA1c_09"
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 12"] <- "HbA1c_12"
+vars_of_interest <- c("HbA1c_00", "HbA1c_03", "HbA1c_06", "HbA1c_09", "HbA1c_12")
+
+data_subset <- data_renamed[, vars_of_interest, drop = FALSE]
+
+colnames(data_subset) <- c("Hb_00", "Hb_03", "Hb_06", "Hb_09", "Hb_12")
+
+md_pattern_result <- md.pattern(data_subset, plot = TRUE)
+title(main = "Паттерны пропущенных данных HbA1c", 
+      line = 2, 
+      cex.main = 1.2,
+      adj = 0.5)
+
+colnames(md_pattern_result)[1:5] <- c("Месяц 0", "Месяц 3", "Месяц 6", "Месяц 9", "Месяц 12")
+
+print(md_pattern_result)
+```
+```{r fig.width = 8, fig.height = 10, results='asis'}
+data_filtered <- subset(data, Treatment %in% c("SGLT2i", "GLP1"))
+
+vars_of_interest <- c("HbA1c 0", "HbA1c 3", "HbA1c 6", "HbA1c 9", "HbA1c 12")
+data_subset <- data_filtered[, vars_of_interest, drop = FALSE]
+
+colnames(data_subset) <- c("Hb_00", "Hb_03", "Hb_06", "Hb_09", "Hb_12")
+
+md_pattern_result <- md.pattern(data_subset, plot = TRUE)
+title(main = "Паттерны пропущенных данных HbA1c в группах SGLT2i и GLP1", 
+      line = 2, 
+      cex.main = 1.2,
+      adj = 0.5)
+
+colnames(md_pattern_result)[1:5] <- c("Месяц 0", "Месяц 3", "Месяц 6", "Месяц 9", "Месяц 12")
+
+
+
+print(md_pattern_result)
+```
+
