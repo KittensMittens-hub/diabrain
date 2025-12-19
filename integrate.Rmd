@@ -4,7 +4,7 @@ author: "Natalya"
 date: "2025-12-10"
 output: html_document
 ---
-# Часть 1  
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -16,6 +16,7 @@ library(tidyr)
 library(gtsummary)
 library(ggplot2)
 ```
+# Часть 1  
 ```{r}
 data <- read_excel("diabrain.xlsx")
 
@@ -186,7 +187,8 @@ df_p3 <- read_excel("diabrain.xlsx")
 df_p3 <- df_p3 %>%
   select(1, 50:71, -65) %>% #столбец 65 странный, удалить?
   mutate(across(c(2:12, 17:22), ~ round(as.numeric(.), 2)),  # преобразуем переменные в numeric или factor в соответствии со спецификацией
-         across(c(1, 13:16), as.factor)) 
+         across(c(13:16), as.factor),
+         across(1, as.numeric))
 summary(df_p3) #посмотрим данные
 df_p3 <- df_p3 %>%
   mutate(Height = if_else(Height == 1, NA, Height), # у пациента с номером 215 рост 1, заменяем на NA
@@ -199,7 +201,7 @@ df_p3 <- df_p3 %>%
          `GFR 12` = if_else(`ID` == 250, NA, `GFR 6`)) # уточнено значение по ПМД
 summary(df_p3) #посмотрим данные еще раз
 
-df_p3$ID <- as.numeric(df_p3$ID)
+#df_p3$ID <- as.numeric(as.character(df_p3$ID))
 ```
 
 # Часть 4 
@@ -226,6 +228,12 @@ df_moca <- df_moca %>%
                             "5" = "GLP1",
                             "8" = "GLP1"
   )) 
+
+df_moca <- df_moca %>%
+  mutate(across(
+    c(`MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`),
+    ~ ifelse(. == 0, NA, .)
+  ))
 
 df_moca <- df_moca %>%
   mutate(across(
@@ -294,7 +302,8 @@ df_moca1 <- df_moca %>%
 merged_data <- data_1 %>%
   left_join(data_2, by = "ID") %>%
   left_join(df_p3, by = "ID") %>% 
-  left_join(df_moca, by = "ID")
+  left_join(select(df_moca, -Treatment), by = "ID")
+openxlsx::write.xlsx(merged_data, "~/Desktop/Biostatistics/Project/merged_data.xlsx")
 ```
 
 
@@ -303,7 +312,7 @@ merged_data <- data_1 %>%
 ## Распределение по полу в группах терапии
 
 ```{r}
-ggplot(merged_data, aes(x = Treatment.x, fill = Sex)) +
+ggplot(merged_data, aes(x = Treatment, fill = Sex)) +
   geom_bar(width = 0.5, position = position_dodge(width = 0.6), alpha = 0.6) +
   labs(
     x = "Группа терапии",
@@ -321,7 +330,7 @@ ggplot(merged_data, aes(x = Treatment.x, fill = Sex)) +
 ## Распределение по длительности сахарного диабета в группах терапии
 
 ```{r}
-ggplot(merged_data, aes(y = `DM duration`, x = Treatment.x, fill = Treatment.x)) +
+ggplot(merged_data, aes(y = `DM duration`, x = Treatment, fill = Treatment)) +
   geom_boxplot(width = 0.5, alpha = 0.8, color = "gray40", 
                outlier.color = "gray30", outlier.shape = 16) +
   scale_fill_brewer(palette = "Set2") + 
@@ -340,7 +349,7 @@ ggplot(merged_data, aes(y = `DM duration`, x = Treatment.x, fill = Treatment.x))
 ```
 
 ```{r}
-ggplot(merged_data, aes(y = `Age`, x = Treatment.x, fill = Treatment.x)) +
+ggplot(merged_data, aes(y = `Age`, x = Treatment, fill = Treatment)) +
   geom_boxplot(width = 0.5, alpha = 0.8, color = "gray40", 
                outlier.color = "gray30", outlier.shape = 16) +
   scale_fill_brewer(palette = "Set2") + 
@@ -358,14 +367,11 @@ ggplot(merged_data, aes(y = `Age`, x = Treatment.x, fill = Treatment.x)) +
   )
 ```
 
-
-
-
 ## Гликированный гемоглобин по визитам
 
 ```{r}
 HbA1c_long <- merged_data %>%
-  select(`HbA1c 0`, `HbA1c 3`, `HbA1c 6`, `HbA1c 9`, `HbA1c 12`) %>% 
+  select(Treatment, `HbA1c 0`, `HbA1c 3`, `HbA1c 6`, `HbA1c 9`, `HbA1c 12`) %>% 
   pivot_longer(cols = c(`HbA1c 0`, `HbA1c 3`, `HbA1c 6`, `HbA1c 9`, `HbA1c 12`),
                names_to = "month",
                values_to = "HbA1c") %>%
@@ -384,27 +390,7 @@ ggplot(HbA1c_long, aes(x = month, y = HbA1c)) +
 ```
 
 ```{r}
-HHbA1c_long <- merged_data %>%
-  select(Treatment.x, `HbA1c 0`, `HbA1c 3`, `HbA1c 6`, `HbA1c 9`, `HbA1c 12`) %>% 
-  pivot_longer(cols = c(`HbA1c 0`, `HbA1c 3`, `HbA1c 6`, `HbA1c 9`, `HbA1c 12`),
-               names_to = "month",
-               values_to = "HbA1c") %>%
-  mutate(month = gsub("HbA1c ", "", month),
-         month = factor(month, levels = c("0", "3", "6", "9", "12")))
-
-ggplot(HbA1c_long, aes(x = month, y = HbA1c)) +
-  geom_boxplot() +
-  labs(
-    x = "Месяц наблюдения",
-    y = "Гликированный гемоглобин, %",
-    title = "Гликированный гемоглобин по визитам"
-  ) +
-  theme_bw()+
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
-```{r}
-ggplot(HHbA1c_long, aes(x = month, y = HbA1c, fill = Treatment.x)) +
+ggplot(HbA1c_long, aes(x = month, y = HbA1c, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), 
                alpha = 0.8, color = "gray30") +
   scale_fill_brewer(palette = "Set2", name = "Терапия") +
@@ -423,13 +409,9 @@ ggplot(HHbA1c_long, aes(x = month, y = HbA1c, fill = Treatment.x)) +
   )
 ```
 
-
-
-
-
 ```{r}
-HbA1c_summary <- HHbA1c_long %>%
-  group_by(Treatment.x, month) %>%
+HbA1c_summary <- HbA1c_long %>%
+  group_by(Treatment, month) %>%
   summarise(
     mean_HbA1c = mean(HbA1c, na.rm = TRUE),
     se = sd(HbA1c, na.rm = TRUE) / sqrt(n()),
@@ -437,7 +419,7 @@ HbA1c_summary <- HHbA1c_long %>%
   )
 
 ggplot(HbA1c_summary, aes(x = month, y = mean_HbA1c, 
-                           group = Treatment.x, color = Treatment.x)) +
+                           group = Treatment, color = Treatment)) +
   geom_line(size = 1) +
   geom_point(size = 3) +
   geom_errorbar(aes(ymin = mean_HbA1c - se, ymax = mean_HbA1c + se), 
@@ -455,15 +437,11 @@ ggplot(HbA1c_summary, aes(x = month, y = mean_HbA1c,
   )
 ```
 
-
-
-
-
 ## Нейронспецифическая енолаза (нг/мл) по визитам
 
 ```{r}
 NSE_long <- merged_data %>%
-  select(Treatment.x,`NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`) %>% 
+  select(Treatment,`NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`) %>% 
   pivot_longer(cols = c(`NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`),
                names_to = "month",
                values_to = "NSE") %>%
@@ -484,7 +462,7 @@ ggplot(NSE_long, aes(x = month, y = NSE)) +
 
 
 ```{r}
-ggplot(NSE_long, aes(x = month, y = NSE, fill = Treatment.x)) +
+ggplot(NSE_long, aes(x = month, y = NSE, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), 
                alpha = 0.8, color = "gray30") +
   scale_fill_brewer(palette = "Set2", name = "Терапия") +
@@ -507,7 +485,7 @@ ggplot(NSE_long, aes(x = month, y = NSE, fill = Treatment.x)) +
 
 ```{r}
 Lchains_long <- merged_data %>%
-  select(Treatment.x,`Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`) %>% 
+  select(Treatment,`Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`) %>% 
   pivot_longer(cols = c(`Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`),
                names_to = "month",
                values_to = "Lchains") %>%
@@ -526,7 +504,7 @@ ggplot(Lchains_long, aes(x = month, y = Lchains)) +
 ```
 
 ```{r}
-ggplot(Lchains_long, aes(x = month, y = Lchains, fill = Treatment.x)) +
+ggplot(Lchains_long, aes(x = month, y = Lchains, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), 
                alpha = 0.8, color = "gray30") +
   scale_fill_brewer(palette = "Set2", name = "Терапия") +
@@ -551,7 +529,7 @@ ggplot(Lchains_long, aes(x = month, y = Lchains, fill = Treatment.x)) +
 
 ```{r}
 S100_long <- merged_data %>%
-  select(Treatment.x,`S100 0`, `S100 3`, `S100 6`, `S100 12`) %>% 
+  select(Treatment,`S100 0`, `S100 3`, `S100 6`, `S100 12`) %>% 
   pivot_longer(cols = c(`S100 0`, `S100 3`, `S100 6`, `S100 12`),
                names_to = "month",
                values_to = "S100") %>%
@@ -569,7 +547,7 @@ ggplot(S100_long, aes(x = month, y = S100)) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 ```{r}
-ggplot(S100_long, aes(x = month, y = S100, fill = Treatment.x)) +
+ggplot(S100_long, aes(x = month, y = S100, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), 
                alpha = 0.8, color = "gray30") +
   scale_fill_brewer(palette = "Set2", name = "Терапия") +
@@ -587,9 +565,6 @@ ggplot(S100_long, aes(x = month, y = S100, fill = Treatment.x)) +
     panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
   )
 ```
-
-
-
 
 ## Общий холестерин (ммоль/л) по визитам
 
@@ -661,22 +636,54 @@ ggplot(TG_long, aes(x = month, y = TG)) +
 
 ```{r}
 BMI_long <- merged_data %>%
-  select(`BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`) %>% 
+  select(ID, Treatment, `BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`) %>% 
   pivot_longer(cols = c(`BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`),
                names_to = "month",
                values_to = "BMI") %>%
   mutate(month = gsub("BMI ", "", month),
          month = factor(month, levels = c("0", "3", "6", "9", "12")))
 
-ggplot(BMI_long, aes(x = month, y = BMI)) +
-  geom_boxplot() +
+ggplot(BMI_long, aes(x = month, y = BMI, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
   labs(
     x = "Месяц наблюдения",
     y = "ИМТ, кг/м²",
-    title = "Распределение ИМТ по визитам"
+    title = "Динамика ИМТ по визитам и группам терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "right",
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
+  )
+```
+
+## MOCA по визитам
+
+```{r}
+MOCA_long <- merged_data %>%
+  select(Treatment, `MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`) %>% 
+  pivot_longer(cols = c(`MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`),
+               names_to = "month",
+               values_to = "MOCA") %>%
+  mutate(month = gsub("MOCA ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "9", "12")))
+
+ggplot(MOCA_long, aes(x = month, y = MOCA, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Шкала MOCA, балл",
+    title = "Распределение баллов Монреальской шкалы по визитам в группах терапии"
   ) +
   theme_bw()+
-  theme(plot.title = element_text(hjust = 0.5))
+  theme(plot.title = element_text(hjust = 0.3))
 ```
 
 ## Креатинин по визитам
