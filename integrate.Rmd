@@ -4,7 +4,6 @@ author: "Natalya"
 date: "2025-12-10"
 output: html_document
 ---
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -16,6 +15,9 @@ library(tidyr)
 library(gtsummary)
 library(ggplot2)
 library(mice)
+library(tidyverse)
+library(naniar)
+library(VIM)
 ```
 # Часть 1  
 ```{r}
@@ -136,7 +138,6 @@ if (length(hrt_index) > 0) {
   data_1 <- data
 }
 ```
-
 # Часть 2 
 ```{r}
 #Замена некорректных значений
@@ -180,7 +181,6 @@ data_2 <- subset(data, select = c("ID", "HRT", "Hypertension",
                                  "Aspirin", "Diuretics", "Statin", 
                                  "Anticoagulants"))
 ```
-
 # Часть 3 
 
 ```{r}
@@ -298,7 +298,6 @@ df_moca1 <- df_moca %>%
   select(-Treatment)
 ```
 
-
 ```{r}
 merged_data <- data_1 %>%
   left_join(data_2, by = "ID") %>%
@@ -306,7 +305,6 @@ merged_data <- data_1 %>%
   left_join(select(df_moca, -Treatment), by = "ID")
 openxlsx::write.xlsx(merged_data, "~/Desktop/Biostatistics/Project/merged_data.xlsx")
 ```
-
 
 # Визуализация
 
@@ -329,7 +327,6 @@ ggplot(merged_data, aes(x = Treatment, fill = Sex)) +
 ```
 
 ## Распределение по длительности сахарного диабета в группах терапии
-
 ```{r}
 ggplot(merged_data, aes(y = `DM duration`, x = Treatment, fill = Treatment)) +
   geom_boxplot(width = 0.5, alpha = 0.8, color = "gray40", 
@@ -437,9 +434,7 @@ ggplot(HbA1c_summary, aes(x = month, y = mean_HbA1c,
     legend.position = "bottom"
   )
 ```
-
 ## Нейронспецифическая енолаза (нг/мл) по визитам
-
 ```{r}
 NSE_long <- merged_data %>%
   select(Treatment,`NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`) %>% 
@@ -459,8 +454,6 @@ ggplot(NSE_long, aes(x = month, y = NSE)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
-
-
 
 ```{r}
 ggplot(NSE_long, aes(x = month, y = NSE, fill = Treatment)) +
@@ -524,10 +517,7 @@ ggplot(Lchains_long, aes(x = month, y = Lchains, fill = Treatment)) +
   )
 ```
 
-
-
 ## Белок S 100 (мкг/мл) по визитам
-
 ```{r}
 S100_long <- merged_data %>%
   select(Treatment,`S100 0`, `S100 3`, `S100 6`, `S100 12`) %>% 
@@ -588,9 +578,7 @@ ggplot(Cholesterol_long, aes(x = month, y = Cholesterol)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
-
 ## Липопротеины низкой плотности (ммоль/л) по визитам
-
 ```{r}
 LDL_long <- merged_data %>%
   select(`LDL 0`, `LDL 6`, `LDL 12`) %>% 
@@ -610,9 +598,7 @@ ggplot(LDL_long, aes(x = month, y = LDL)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
-
 ## Триглицериды (ммоль/л) по визитам
-
 ```{r}
 TG_long <- merged_data %>%
   select(`TG 0`, `TG 6`, `TG 12`) %>% 
@@ -632,9 +618,7 @@ ggplot(TG_long, aes(x = month, y = TG)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
-
 ## ИМТ по визитам
-
 ```{r}
 BMI_long <- merged_data %>%
   select(ID, Treatment, `BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`) %>% 
@@ -662,9 +646,7 @@ ggplot(BMI_long, aes(x = month, y = BMI, fill = Treatment)) +
     panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
   )
 ```
-
 ## MOCA по визитам
-
 ```{r}
 MOCA_long <- merged_data %>%
   select(Treatment, `MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`) %>% 
@@ -686,9 +668,7 @@ ggplot(MOCA_long, aes(x = month, y = MOCA, fill = Treatment)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.3))
 ```
-
 ## Креатинин по визитам
-
 ```{r}
 creat_long <- merged_data %>%
   select(`Creatinine 0`, `Creatinine 6`, `Creatinine 12`) %>% 
@@ -708,9 +688,7 @@ ggplot(creat_long, aes(x = month, y = Creatinine)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
-
 ## СКФ по визитам
-
 ```{r}
 GFR_long <- merged_data %>%
   select(`GFR0`, `GFR 6`, `GFR 12`) %>% 
@@ -730,7 +708,6 @@ ggplot(GFR_long, aes(x = month, y = GFR)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
-
 ```{r fig.width = 8, fig.height = 10, results='asis'}
 
 data_renamed <- data
@@ -776,4 +753,57 @@ colnames(md_pattern_result)[1:5] <- c("Месяц 0", "Месяц 3", "Меся�
 
 print(md_pattern_result)
 ```
+```{r}
 
+```
+
+```{r}
+install.packages("dagitty")
+library(dagitty)
+library(ggplot2)
+```
+
+```{r}
+naniar::miss_prop_summary(merged_data)
+naniar::miss_var_summary(merged_data)
+naniar::gg_miss_var(merged_data)
+naniar::gg_miss_case(merged_data)
+naniar::gg_miss_upset(merged_data)
+```
+```{r}
+VIM::aggr(merged_data)
+mice::md.pattern(merged_data)
+```
+
+```{r}
+selected_data <- merged_data %>%
+  select(-'Cholesterol 0', -'Cholesterol 6', -'Cholesterol 12', -'LDL 0', - 'LDL 6', -'LDL 12', - 'TG 0', -'TG 6', -'TG 12', -'Kidney disease', -'Kidney disease stage', -'Albuminuria', -'Creatinine 0', -'Creatinine 6', -'Creatinine 12', -'GFR0', -'GFR 6',-'GFR 12', -'Treatment.y', -'Polineuropathy investigator')
+```
+
+```{r}
+naniar::mcar_test(selected_data)
+```
+
+```{r}
+naniar::add_any_miss(selected_data) |> 
+    gtsummary::tbl_summary(
+        by = any_miss_all
+    ) |> 
+    gtsummary::add_p()
+```
+
+```{r}
+imp <- mice(
+    selected_data,
+    m = 10, 
+    maxit = 10, 
+    printFlag = FALSE, 
+    seed = 42
+)
+
+imp$predictorMatrix
+imp$method
+```
+
+
+ооооо
