@@ -4,9 +4,11 @@ author: "Natalya"
 date: "2025-12-10"
 output: html_document
 ---
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 ```{r}
 library(readxl)
 library(dplyr)
@@ -19,7 +21,9 @@ library(tidyverse)
 library(naniar)
 library(VIM)
 ```
-# Часть 1  
+
+# Часть 1
+
 ```{r}
 data <- read_excel("diabrain.xlsx")
 
@@ -127,6 +131,7 @@ data$`LDL 0` <- as.numeric(data$`LDL 0`)
 data$`TG 0` <- as.numeric(data$`TG 0`)
 
 ```
+
 ```{r}
 hrt_index <- which(colnames(data) == "HRT")
 
@@ -138,7 +143,9 @@ if (length(hrt_index) > 0) {
   data_1 <- data
 }
 ```
-# Часть 2 
+
+# Часть 2
+
 ```{r}
 #Замена некорректных значений
 data$`Сardiac ischemia`[data$ID == 152] <- 0
@@ -172,6 +179,7 @@ data <- data %>%
   )
 
 ```
+
 ```{r}
 data_2 <- subset(data, select = c("ID", "HRT", "Hypertension", 
                                  "Hypertension duration", "Сardiac ischemia", 
@@ -181,7 +189,8 @@ data_2 <- subset(data, select = c("ID", "HRT", "Hypertension",
                                  "Aspirin", "Diuretics", "Statin", 
                                  "Anticoagulants"))
 ```
-# Часть 3 
+
+# Часть 3
 
 ```{r}
 df_p3 <- read_excel("diabrain.xlsx")
@@ -205,7 +214,8 @@ summary(df_p3) #посмотрим данные еще раз
 #df_p3$ID <- as.numeric(as.character(df_p3$ID))
 ```
 
-# Часть 4 
+# Часть 4
+
 ```{r}
 file_path <- "diabrain.xlsx"
 df_brain <- read_excel(file_path)
@@ -293,6 +303,7 @@ stats_by_treat <- df_moca %>%
 
 stats_by_treat
 ```
+
 ```{r}
 df_moca1 <- df_moca %>%
   select(-Treatment)
@@ -327,6 +338,7 @@ ggplot(merged_data, aes(x = Treatment, fill = Sex)) +
 ```
 
 ## Распределение по длительности сахарного диабета в группах терапии
+
 ```{r}
 ggplot(merged_data, aes(y = `DM duration`, x = Treatment, fill = Treatment)) +
   geom_boxplot(width = 0.5, alpha = 0.8, color = "gray40", 
@@ -434,7 +446,9 @@ ggplot(HbA1c_summary, aes(x = month, y = mean_HbA1c,
     legend.position = "bottom"
   )
 ```
+
 ## Нейронспецифическая енолаза (нг/мл) по визитам
+
 ```{r}
 NSE_long <- merged_data %>%
   select(Treatment,`NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`) %>% 
@@ -518,6 +532,7 @@ ggplot(Lchains_long, aes(x = month, y = Lchains, fill = Treatment)) +
 ```
 
 ## Белок S 100 (мкг/мл) по визитам
+
 ```{r}
 S100_long <- merged_data %>%
   select(Treatment,`S100 0`, `S100 3`, `S100 6`, `S100 12`) %>% 
@@ -537,6 +552,7 @@ ggplot(S100_long, aes(x = month, y = S100)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
+
 ```{r}
 ggplot(S100_long, aes(x = month, y = S100, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), 
@@ -578,7 +594,9 @@ ggplot(Cholesterol_long, aes(x = month, y = Cholesterol)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
+
 ## Липопротеины низкой плотности (ммоль/л) по визитам
+
 ```{r}
 LDL_long <- merged_data %>%
   select(`LDL 0`, `LDL 6`, `LDL 12`) %>% 
@@ -598,7 +616,9 @@ ggplot(LDL_long, aes(x = month, y = LDL)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
+
 ## Триглицериды (ммоль/л) по визитам
+
 ```{r}
 TG_long <- merged_data %>%
   select(`TG 0`, `TG 6`, `TG 12`) %>% 
@@ -618,7 +638,9 @@ ggplot(TG_long, aes(x = month, y = TG)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
+
 ## ИМТ по визитам
+
 ```{r}
 BMI_long <- merged_data %>%
   select(ID, Treatment, `BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`) %>% 
@@ -646,7 +668,9 @@ ggplot(BMI_long, aes(x = month, y = BMI, fill = Treatment)) +
     panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
   )
 ```
+
 ## MOCA по визитам
+
 ```{r}
 MOCA_long <- merged_data %>%
   select(Treatment, `MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`) %>% 
@@ -668,7 +692,9 @@ ggplot(MOCA_long, aes(x = month, y = MOCA, fill = Treatment)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.3))
 ```
+
 ## Креатинин по визитам
+
 ```{r}
 creat_long <- merged_data %>%
   select(`Creatinine 0`, `Creatinine 6`, `Creatinine 12`) %>% 
@@ -688,7 +714,9 @@ ggplot(creat_long, aes(x = month, y = Creatinine)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
+
 ## СКФ по визитам
+
 ```{r}
 GFR_long <- merged_data %>%
   select(`GFR0`, `GFR 6`, `GFR 12`) %>% 
@@ -708,6 +736,7 @@ ggplot(GFR_long, aes(x = month, y = GFR)) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
 ```
+
 ```{r fig.width = 8, fig.height = 10, results='asis'}
 
 data_renamed <- data
@@ -733,6 +762,7 @@ colnames(md_pattern_result)[1:5] <- c("Месяц 0", "Месяц 3", "Меся�
 
 print(md_pattern_result)
 ```
+
 ```{r fig.width = 8, fig.height = 10, results='asis'}
 data_filtered <- subset(data, Treatment %in% c("SGLT2i", "GLP1"))
 
@@ -753,6 +783,7 @@ colnames(md_pattern_result)[1:5] <- c("Месяц 0", "Месяц 3", "Меся�
 
 print(md_pattern_result)
 ```
+
 ```{r}
 
 ```
@@ -770,6 +801,7 @@ naniar::gg_miss_var(merged_data)
 naniar::gg_miss_case(merged_data)
 naniar::gg_miss_upset(merged_data)
 ```
+
 ```{r}
 VIM::aggr(merged_data)
 mice::md.pattern(merged_data)
@@ -777,8 +809,202 @@ mice::md.pattern(merged_data)
 
 ```{r}
 selected_data <- merged_data %>%
-  select(-'Cholesterol 0', -'Cholesterol 6', -'Cholesterol 12', -'LDL 0', - 'LDL 6', -'LDL 12', - 'TG 0', -'TG 6', -'TG 12', -'Kidney disease', -'Kidney disease stage', -'Albuminuria', -'Creatinine 0', -'Creatinine 6', -'Creatinine 12', -'GFR0', -'GFR 6',-'GFR 12', -'Treatment.y', -'Polineuropathy investigator')
+  select(-'Cholesterol 0', -'Cholesterol 6', -'Cholesterol 12', -'LDL 0', - 'LDL 6', -'LDL 12', - 'TG 0', -'TG 6', -'TG 12', -'Kidney disease', -'Kidney disease stage', -'Albuminuria', -'Creatinine 0', -'Creatinine 6', -'Creatinine 12', -'GFR0', -'GFR 6',-'GFR 12',  -'Polineuropathy investigator')
 ```
+
+## GEEPACK STUDY
+
+### MOCA
+
+```{r}
+moca_long <- merged_data %>%
+  select(ID, Treatment, Age, Sex, `DM duration`,
+         `MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`) %>%
+  pivot_longer(
+    cols = starts_with("MOCA"),
+    names_to = "visit",
+    values_to = "MOCA"
+  ) %>%
+  mutate(
+    month = case_when(
+      visit == "MOCA 0"  ~ 0,
+      visit == "MOCA 3"  ~ 3,
+      visit == "MOCA 6"  ~ 6,
+      visit == "MOCA 9"  ~ 9,
+      visit == "MOCA 12" ~ 12
+    ),
+    month_f = factor(month, levels = c(0, 3, 6, 9, 12)),
+    Treatment = factor(Treatment),
+    Sex = factor(Sex),
+    MOCA = as.numeric(MOCA),
+    DMdur = as.numeric(`DM duration`)
+  )
+
+moca_mod <- moca_long %>%
+  filter(!is.na(MOCA)) %>%
+  arrange(ID, month)
+
+moca_2g <- moca_mod %>%
+  filter(Treatment %in% c("GLP1", "SGLT2i")) %>%
+  droplevels()
+
+with(moca_2g, table(month_f, Treatment))
+summary(table(moca_2g$ID))
+
+m_moca_2g <- geeglm(
+  MOCA ~ month_f * Treatment + Age + Sex + DMdur,
+  id = ID,
+  waves = month,
+  data = moca_2g,
+  family = gaussian(),
+  corstr = "ar1"
+)
+
+summary(m_moca_2g)
+```
+
+В модели с взаимодействием время\*группа терапии, включающей пациентов, получавших GLP-1 и SGLT2i, отмечалось статистически значимое увеличение показателей MOCA во времени в обеих группах. По сравнению с исходным визитом, к 6-му, 9-му и 12-му месяцам наблюдения баллы MOCA достоверно возрастали (p \< 0.01), что свидетельствует об улучшении когнитивной функции в процессе наблюдения. При этом статистически значимого взаимодействия между временем и группой терапии выявлено не было, что указывает на сопоставимую динамику изменений MOCA в группах GLP-1 и SGLT2i. Различия между группами на исходном визите также не достигали статистической значимости. Возраст пациентов оказывал независимое отрицательное влияние на уровень когнитивной функции, тогда как пол и длительность сахарного диабета не были ассоциированы с показателями MOCA. Внутрипациентская корреляция повторных измерений была умеренной (AR-1 α = 0.57), что подтверждает корректность использования продольной модели GEE.
+
+```{r}
+library(emmeans)
+
+emm_moca <- emmeans(m_moca_2g, ~ Treatment | month_f)
+emm_moca
+pairs(emm_moca, adjust = "bonferroni")
+
+emm_df <- as.data.frame(emm_moca)
+
+ggplot(emm_df, aes(month_f, emmean, group = Treatment, color = Treatment)) +
+  geom_line(size = 1) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.1) +
+  labs(
+    x = "Месяц наблюдения",
+    y = "MOCA, баллы",
+    title = "Модельная динамика MOCA: GLP1 vs SGLT2i"
+  ) +
+  theme_bw()
+```
+
+На основе обобщенной оценочной модели были рассчитаны скорректированные средние значения MOCA по визитам для групп GLP-1 и SGLT2i. В обеих группах наблюдалось постепенное увеличение баллов MOCA в течение периода наблюдения. На исходном визите статистически значимых различий между группами выявлено не было (p = 0.58). Аналогично, различия между группами на 3-м, 9-м и 12-м месяцах наблюдения не достигали статистической значимости (p \> 0.1).
+
+На 6-м месяце наблюдения было выявлено статистически значимое различие между группами: в группе SGLT2i средний балл MOCA был выше по сравнению с группой GLP-1 (разница 1.37 балла, p = 0.014). Однако данное различие носило транзиторный характер и не сохранялось на последующих визитах. В целом, полученные данные свидетельствуют о сопоставимой динамике когнитивной функции в группах GLP-1 и SGLT2i, что согласуется с отсутствием статистически значимого взаимодействия время\*группа терапии в основной модели.
+
+### NSE
+
+```{r}
+nse_long <- merged_data %>%
+  select(ID, Treatment, Age, Sex, `DM duration`,
+         `NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`) %>% # у NSE нет 9 месяца
+  pivot_longer(
+    cols = starts_with("NSE"),
+    names_to = "visit",
+    values_to = "NSE"
+  ) %>%
+  mutate(
+    month = case_when(
+      visit == "NSE 0"  ~ 0,
+      visit == "NSE 3"  ~ 3,
+      visit == "NSE 6"  ~ 6,
+      visit == "NSE 12" ~ 12
+    ),
+    month_f = factor(month, levels = c(0, 3, 6, 12)),
+    Treatment = factor(Treatment),
+    Sex = factor(Sex),
+    NSE = as.numeric(NSE),
+    DMdur = as.numeric(`DM duration`)
+  )
+
+nse_mod <- nse_long %>%
+  filter(!is.na(NSE)) %>%
+  arrange(ID, month)
+
+nse_2g <- nse_mod %>%
+  filter(Treatment %in% c("GLP1", "SGLT2i")) %>%
+  droplevels()
+
+with(nse_2g, table(month_f, Treatment))
+summary(table(nse_2g$ID))
+
+m_nse_2g <- geeglm(
+  NSE ~ month_f * Treatment + Age + Sex + DMdur,
+  id = ID,
+  waves = month,
+  data = nse_2g,
+  family = gaussian(),
+  corstr = "ar1"
+)
+
+summary(m_nse_2g)
+```
+
+В модели с взаимодействием время\*группа терапии, включающей пациентов, получавших GLP-1 и SGLT2i, статистически значимого взаимодействия между временем наблюдения и типом терапии выявлено не было (p \> 0.2 для всех interaction-терминов). Это указывает на отсутствие различий в траектории изменения уровня нейронспецифической енолазы между группами терапии.
+
+В группе GLP-1 отмечалась тенденция к снижению уровня NSE к 12-му месяцу наблюдения по сравнению с исходным визитом (-1.85 нг/мл, p = 0.021). В группе SGLT2i данное снижение не отличалось статистически значимо от динамики в группе GLP-1, что подтверждается отсутствием значимого взаимодействия «время × терапия» на всех визитах. Возраст, пол и длительность сахарного диабета не были статистически значимо ассоциированы с уровнем NSE. Внутрипациентская корреляция повторных измерений была умеренной (AR-1 α = 0.62), что подтверждает корректность применения продольной модели GEE.
+
+### Lchains
+
+```{r}
+lch_long <- merged_data %>%
+  select(ID, Treatment, Age, Sex, `DM duration`,
+         `Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`) %>%
+  pivot_longer(
+    cols = starts_with("Lchains"),
+    names_to = "visit",
+    values_to = "Lchains"
+  ) %>%
+  mutate(
+    month = case_when(
+      visit == "Lchains 0"  ~ 0,
+      visit == "Lchains 3"  ~ 3,
+      visit == "Lchains 6"  ~ 6,
+      visit == "Lchains 12" ~ 12
+    ),
+    month_f = factor(month, levels = c(0, 3, 6, 12)),
+    Treatment = factor(Treatment),
+    Sex = factor(Sex),
+    Lchains = as.numeric(Lchains),
+    DMdur = as.numeric(`DM duration`)
+  )
+
+lch_mod <- lch_long %>%
+  filter(!is.na(Lchains)) %>%
+  arrange(ID, month)
+
+lch_2g <- lch_mod %>%
+  filter(Treatment %in% c("GLP1", "SGLT2i")) %>%
+  droplevels()
+
+with(lch_2g, table(month_f, Treatment))
+summary(table(lch_2g$ID))
+
+m_lch_2g <- geeglm(
+  Lchains ~ month_f * Treatment + Age + Sex + DMdur,
+  id = ID,
+  waves = month,
+  data = lch_2g,
+  family = gaussian(),
+  corstr = "ar1"
+)
+
+summary(m_lch_2g)
+
+lch_2g <- lch_2g %>%
+  mutate(logLchains = log1p(Lchains))
+
+m_log_lch_2g <- geeglm(
+  logLchains ~ month_f * Treatment + Age + Sex + DMdur,
+  id = ID,
+  waves = month,
+  data = lch_2g,
+  family = gaussian(),
+  corstr = "ar1"
+)
+
+summary(m_log_lch_2g)
+```
+
+В модели с взаимодействием время\*группа терапии с использованием лог-трансформированного уровня легких цепей нейрофиламента устойчивых различий в динамике показателя между группами GLP-1 и SGLT2i выявлено не было. На 3-м месяце наблюдения отмечалось кратковременное различие в изменении уровня Lchains между группами, однако данный эффект не сохранялся на последующих визитах. В целом траектории изменения Lchains в группах терапии были сопоставимы. Мужской пол ассоциировался с более высоким уровнем Lchains, тогда как возраст и длительность сахарного диабета статистически значимого влияния не оказывали.
 
 ```{r}
 naniar::mcar_test(selected_data)
@@ -804,6 +1030,5 @@ imp <- mice(
 imp$predictorMatrix
 imp$method
 ```
-
 
 ооооо
