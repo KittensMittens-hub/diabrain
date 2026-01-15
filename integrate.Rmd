@@ -828,16 +828,32 @@ data_long_f <- data_long %>%
 # Смешанная модель для оценки MOCA 
 
 Только для различий между иНГЛТ-2 и ГПП-1. Модель включает взаимодействие лечения и времени. 
+
+```{r}
+```
+
 ```{r}
 library(lme4)
 library(emmeans)
-model_scales <- lmer(MOCA ~ Treatment*time + Age + Sex + HbA1c + 
+model_scales <- lmer(MOCA ~ Treatment*as.factor(time) + Age + Sex + HbA1c + 
                        Hypertension + (1 | ID),
                      data = data_long_f)
-emmeans_treatment <- emmeans(model_scales, specs = pairwise ~ Treatment)
-summary(emmeans_treatment$emmeans)
-summary(emmeans_treatment$contrasts) 
+emmeans_treatment <- emmeans(model_scales, specs = ~ Treatment |  time)
+nd <- expand.grid(Treatment = unique(data_long_f$Treatment), time = unique(data_long_f$time),
+            Age = mean(data_long_f$Age, na.rm = TRUE), Sex = unique(data_long_f$Sex), HbA1c = mean(data_long_f$HbA1c, na.rm = TRUE), Hypertension = unique(data_long_f$Hypertension)
+              ) %>% drop_na()
+
+predict(model_scales, newdata = nd, re.form = NA)
+
+nd$predict <- predict(model_scales, newdata = nd, re.form = NA)
+nd
+emmeans_treatment %>% 
+  contrast("pairwise", infer = TRUE)
 ```
+
+почитать про сетки 
+emmeans
+
 # Модель для MMSE 
 ```{r}
 model_scales2 <- lmer(MMSE ~ Treatment*time + Age + Sex + HbA1c + 
