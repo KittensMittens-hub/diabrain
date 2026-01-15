@@ -1,0 +1,879 @@
+---
+title: "integrate"
+author: "Natalya"
+date: "2025-12-10"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(readxl)
+library(dplyr)
+library(gtsummary)
+library(tidyr)
+library(gtsummary)
+library(ggplot2)
+library(mice)
+library(tidyverse)
+library(naniar)
+library(VIM)
+```
+# Часть 1  
+```{r}
+data <- read_excel("diabrain.xlsx")
+
+data <- data %>%
+  mutate(Treatment = recode(Treatment,
+                            "1" = "метформин",
+                            "2" = "SGLT2i",
+                            "3" = "SGLT2i", 
+                            "7" = "SGLT2i",
+                            "4" = "GLP1",
+                            "51" = "GLP1",
+                            "52" = "GLP1",
+                            "6" = "GLP1",
+                            "5" = "GLP1",
+                            "8" = "GLP1"
+  )) 
+
+
+data$Age[is.na(data$Age)] <- "69"
+data <- data %>% 
+  mutate(Age = as.numeric(Age))
+
+data$Treatment <- as.factor(data$Treatment)
+data$Sex <- as.factor(data$Sex)
+
+
+data$`HbA1c level` <- as.factor(data$`HbA1c level`)
+
+tbl <- data %>%
+  tbl_summary(include = `HbA1c 0`)
+tbl
+
+replacement_df <- data.frame(
+  ID = c(136, 149, 154, 163, 215, 231, 238),
+  New_DM_Duration = c(10, 8, 16, 8, 6, 10, 7)
+)
+
+duration <- summary(data$`DM duration`)
+print(duration)
+
+
+data <- data %>%
+  left_join(replacement_df, by = "ID") %>%
+  mutate(`DM duration` = ifelse(is.na(`DM duration`) & !is.na(New_DM_Duration), 
+                                New_DM_Duration, 
+                                `DM duration`)) %>%
+  select(-New_DM_Duration) 
+
+data$`DM duration`[data$`DM duration` == 0] <- 1
+
+HH <- summary(data$`HbA1c 0`)
+print(HH)
+
+data$`HbA1c 0`[data$`HbA1c 0` == 45327.0] <- 6
+data$`HbA1c 0`[data$`HbA1c 0` == NA] <- 10
+
+data <- data %>%
+  mutate(`HbA1c 0` = replace(`HbA1c 0`, is.na(`HbA1c 0`), 10))
+
+HH3 <- summary(data$`HbA1c 3`)
+print(HH3)
+
+data$`HbA1c 6` <- as.numeric(data$`HbA1c 6`)
+
+HH6 <- summary(data$`HbA1c 6`)
+print(HH6)
+
+data$`HbA1c 9` <- as.numeric(data$`HbA1c 9`)
+
+data$`HbA1c 9`[data$`HbA1c 9` == 45296.0] <- 5
+data$`HbA1c 9`[data$`HbA1c 9` == 45298.0] <- 6.5
+
+HH9 <- summary(data$`HbA1c 9`)
+print(HH9)
+
+data$`HbA1c 12` <- as.numeric(data$`HbA1c 12`)
+data$`HbA1c 12`[data$`HbA1c 12` == 45298.0] <- 6.0
+HH12 <- summary(data$`HbA1c 12`)
+print(HH12)
+
+NSE0 <- summary(data$`NSE 0`)
+print(NSE0)
+
+NSE6 <- summary(data$`NSE 6`)
+print(NSE6)
+
+NSE12 <- summary(data$`NSE 12`)
+print(NSE12)
+
+Lc0 <- summary(data$`NSE 12`)
+print(NSE12)
+
+
+data$`S100 0`[data$`S100 0` == 0.02] <- 20
+data$`S100 0`[data$`S100 0` == 0.03] <- 30
+
+data$`S100 3`[data$`S100 3` == 0.03] <- 30
+
+data$`S100 6`[data$`S100 6` == 0.05] <- 50
+
+data$`S100 12`[data$`S100 6` == 0.01] <- 10
+
+data$`LDL 0` <- as.numeric(data$`LDL 0`)
+
+data$`TG 0` <- as.numeric(data$`TG 0`)
+
+```
+```{r}
+hrt_index <- which(colnames(data) == "HRT")
+
+if (length(hrt_index) > 0) {
+
+  data_1 <- data[, 1:(hrt_index - 1), drop = FALSE]
+} else {
+  warning("Столбец 'HRT' не найден")
+  data_1 <- data
+}
+```
+# Часть 2 
+```{r}
+#Замена некорректных значений
+data$`Сardiac ischemia`[data$ID == 152] <- 0
+
+data$Alcohol[data$ID == 205] <- 1
+
+data$Anticoagulants[data$ID == 266] <- NA
+
+data$`Hypertension duration`[data$ID %in% c(127, 179, 181, 222)] <- NA
+
+data$Hypertension[data$ID == 215] <- 1
+
+data$`Hypertension duration`[data$ID %in% c(142, 168)] <- NA
+
+
+#Изменения типов переменных
+data <- data %>% 
+  mutate(
+    across(c(HRT, Hypertension, `Сardiac ischemia`, Stroke, Polineuropathy, Retinopathy, Smoking, Alcohol, `ACE inhibitors`, ARB, BB, `Calcium channel blockers`, Aspirin, Diuretics, Statin, Anticoagulants), ~as.factor(.)),
+    `Hypertension duration` = as.numeric(`Hypertension duration`)
+    )
+
+
+#Пропущенные значения длительности гипертонии заменяем на 0 если диагноза гипертонии не стоит
+data <- data %>% 
+  mutate(
+    `Hypertension duration` = case_when(
+      Hypertension == 0 & is.na(`Hypertension duration`) ~ 0,
+      TRUE ~ `Hypertension duration`
+    )
+  )
+
+```
+```{r}
+data_2 <- subset(data, select = c("ID", "HRT", "Hypertension", 
+                                 "Hypertension duration", "Сardiac ischemia", 
+                                 "Stroke", "Polineuropathy", "Retinopathy", 
+                                 "Smoking", "Alcohol", "ACE inhibitors", 
+                                 "ARB", "BB", "Calcium channel blockers", 
+                                 "Aspirin", "Diuretics", "Statin", 
+                                 "Anticoagulants"))
+```
+# Часть 3 
+
+```{r}
+df_p3 <- read_excel("diabrain.xlsx")
+df_p3 <- df_p3 %>%
+  select(1, 50:71, -65) %>% #столбец 65 странный, удалить?
+  mutate(across(c(2:12, 17:22), ~ round(as.numeric(.), 2)),  # преобразуем переменные в numeric или factor в соответствии со спецификацией
+         across(c(13:16), as.factor),
+         across(1, as.numeric))
+summary(df_p3) #посмотрим данные
+df_p3 <- df_p3 %>%
+  mutate(Height = if_else(Height == 1, NA, Height), # у пациента с номером 215 рост 1, заменяем на NA
+         `BMI 0` = if_else(`BMI 0` == 0, NA, `BMI 0`), # у пациента с номером 215 ИМТ 0, заменяем на NA
+         `BMI 6` = if_else(`BMI 6` == 0, NA, `BMI 6`),
+         `BMI 12` = if_else(`BMI 12` == 45770, 23.40, `BMI 12`), # значение было записано, как дата, при преобразовании в формат numeric сломалось
+         `Creatinine 6` = if_else(`ID` == 198, 111, `Creatinine 6`), # у пациента 198 есть значения креатинина 1,11, заменяем на 111
+         `GFR 6` = if_else(`ID` == 184, 101, `GFR 6`), # уточнено значение по ПМД
+         `GFR 6` = if_else(`ID` == 198, 68, `GFR 6`), # уточнено значение по ПМД
+         `GFR 12` = if_else(`ID` == 250, NA, `GFR 6`)) # уточнено значение по ПМД
+summary(df_p3) #посмотрим данные еще раз
+
+#df_p3$ID <- as.numeric(as.character(df_p3$ID))
+```
+
+# Часть 4 
+```{r}
+file_path <- "diabrain.xlsx"
+df_brain <- read_excel(file_path)
+
+moca_start <- 72
+df_moca <- df_brain[, moca_start:ncol(df_brain)]
+
+df_moca <- df_brain %>%
+  select(ID, Treatment, moca_start:ncol(df_brain))
+
+df_moca <- df_moca %>%
+  mutate(Treatment = recode(Treatment,
+                            "1" = "метформин",
+                            "2" = "SGLT2i",
+                            "3" = "SGLT2i", 
+                            "7" = "SGLT2i",
+                            "4" = "GLP1",
+                            "51" = "GLP1",
+                            "52" = "GLP1",
+                            "6" = "GLP1",
+                            "5" = "GLP1",
+                            "8" = "GLP1"
+  )) 
+
+df_moca <- df_moca %>%
+  mutate(across(
+    c(`MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`),
+    ~ ifelse(. == 0, NA, .)
+  ))
+
+df_moca <- df_moca %>%
+  mutate(across(
+    where(is.character) & !matches("^Treatment$"),
+    ~ suppressWarnings(as.numeric(gsub(",", ".", .)))
+  ))
+
+df_num <- df_moca[, sapply(df_moca, is.numeric)]
+
+stats_df <- data.frame(
+  variable = names(df_num),
+  mean = sapply(df_num, function(x) round(mean(x, na.rm = TRUE), 2)),
+  sd   = sapply(df_num, function(x) round(sd(x,   na.rm = TRUE), 2)),
+  min  = sapply(df_num, function(x) round(min(x,  na.rm = TRUE), 2)),
+  max  = sapply(df_num, function(x) round(max(x,  na.rm = TRUE), 2)),
+  missing_n = sapply(df_num, function(x) sum(is.na(x))),
+  missing_pct = sapply(df_num, function(x) round(mean(is.na(x)) * 100, 2)),
+  stringsAsFactors = FALSE
+)
+
+stats_df
+
+write.csv(stats_df,
+          "stats_overall.csv",
+          row.names = FALSE,
+          fileEncoding = "UTF-8")
+
+safe_stat <- function(x, fun) {
+  x <- x[!is.na(x)]
+  if (length(x) == 0) return(NA_real_)
+  fun(x)
+}
+
+stats_by_treat <- df_moca %>%
+  pivot_longer(
+    cols = -Treatment,
+    names_to  = "scale",
+    values_to = "value"
+  ) %>%
+  group_by(Treatment, scale) %>%
+  summarise(
+    n           = sum(!is.na(value)),
+    missing_n   = sum(is.na(value)),
+    missing_pct = round(100 * missing_n / (n + missing_n), 1),
+    
+    mean   = round(safe_stat(value, mean),   2),
+    sd     = round(safe_stat(value, sd),     2),
+    median = round(safe_stat(value, median), 2),
+    iqr    = round(safe_stat(value, IQR),    2),
+    min    = round(safe_stat(value, min),    2),
+    max    = round(safe_stat(value, max),    2),
+    
+    .groups = "drop"
+  )
+
+
+stats_by_treat
+```
+```{r}
+df_moca1 <- df_moca %>%
+  select(-Treatment)
+```
+
+```{r}
+merged_data <- data_1 %>%
+  left_join(data_2, by = "ID") %>%
+  left_join(df_p3, by = "ID") %>% 
+  left_join(select(df_moca, -Treatment), by = "ID")
+openxlsx::write.xlsx(merged_data, "~/Desktop/Biostatistics/Project/merged_data.xlsx")
+```
+
+# Визуализация
+
+## Распределение по полу в группах терапии
+
+```{r}
+ggplot(merged_data, aes(x = Treatment, fill = Sex)) +
+  geom_bar(width = 0.5, position = position_dodge(width = 0.6), alpha = 0.6) +
+  labs(
+    x = "Группа терапии",
+    y = "Число пациентов",
+    title = "Распределение пациентов по полу в группах терапии") +
+  scale_fill_manual(name   = "Пол",
+                      labels = c("0" = "Женщины",
+                                 "1"   = "Мужчины"),
+                      values = c("0" = "pink",
+                                 "1" = "blue"))+
+  theme_minimal()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Распределение по длительности сахарного диабета в группах терапии
+```{r}
+ggplot(merged_data, aes(y = `DM duration`, x = Treatment, fill = Treatment)) +
+  geom_boxplot(width = 0.5, alpha = 0.8, color = "gray40", 
+               outlier.color = "gray30", outlier.shape = 16) +
+  scale_fill_brewer(palette = "Set2") + 
+  labs(
+    x = "Группа терапии",
+    y = "Длительность сахарного диабета, лет",
+    title = "Распределение пациентов по длительности сахарного диабета в группах терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "none",  
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+```{r}
+ggplot(merged_data, aes(y = `Age`, x = Treatment, fill = Treatment)) +
+  geom_boxplot(width = 0.5, alpha = 0.8, color = "gray40", 
+               outlier.color = "gray30", outlier.shape = 16) +
+  scale_fill_brewer(palette = "Set2") + 
+  labs(
+    x = "Группа терапии",
+    y = "Возраст, лет",
+    title = "Распределение пациентов по возрасту в группах терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "none",  
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+## Гликированный гемоглобин по визитам
+
+```{r}
+HbA1c_long <- merged_data %>%
+  select(Treatment, `HbA1c 0`, `HbA1c 3`, `HbA1c 6`, `HbA1c 9`, `HbA1c 12`) %>% 
+  pivot_longer(cols = c(`HbA1c 0`, `HbA1c 3`, `HbA1c 6`, `HbA1c 9`, `HbA1c 12`),
+               names_to = "month",
+               values_to = "HbA1c") %>%
+  mutate(month = gsub("HbA1c ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "9", "12")))
+
+ggplot(HbA1c_long, aes(x = month, y = HbA1c)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Гликированный гемоглобин, %",
+    title = "Гликированный гемоглобин по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+ggplot(HbA1c_long, aes(x = month, y = HbA1c, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  labs(
+    x = "Месяц наблюдения",
+    y = "HbA1c, %",
+    title = "Динамика гликированного гемоглобина по визитам и группам терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "right",
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
+  )
+```
+
+```{r}
+HbA1c_summary <- HbA1c_long %>%
+  group_by(Treatment, month) %>%
+  summarise(
+    mean_HbA1c = mean(HbA1c, na.rm = TRUE),
+    se = sd(HbA1c, na.rm = TRUE) / sqrt(n()),
+    .groups = 'drop'
+  )
+
+ggplot(HbA1c_summary, aes(x = month, y = mean_HbA1c, 
+                           group = Treatment, color = Treatment)) +
+  geom_line(size = 1) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean_HbA1c - se, ymax = mean_HbA1c + se), 
+                width = 0.1, size = 0.8) +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Гликированный гемоглобин, %",
+    title = "Динамика гликированного гемоглобина по визитам",
+    color = "Терапия"
+  ) +
+  theme_bw() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "bottom"
+  )
+```
+## Нейронспецифическая енолаза (нг/мл) по визитам
+```{r}
+NSE_long <- merged_data %>%
+  select(Treatment,`NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`) %>% 
+  pivot_longer(cols = c(`NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`),
+               names_to = "month",
+               values_to = "NSE") %>%
+  mutate(month = gsub("NSE ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "12")))
+
+ggplot(NSE_long, aes(x = month, y = NSE)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "NSE, нг/мл",
+    title = "Уровень нейронспецифической енолазы по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+ggplot(NSE_long, aes(x = month, y = NSE, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  labs(
+    x = "Месяц наблюдения",
+    y = "NSE, нг/мл",
+    title = "Уровень нейронспецифической енолазы в группах терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "right",
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
+  )
+```
+
+## Легкие цепи нейрофиламента (нг/мл) по визитам
+
+```{r}
+Lchains_long <- merged_data %>%
+  select(Treatment,`Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`) %>% 
+  pivot_longer(cols = c(`Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`),
+               names_to = "month",
+               values_to = "Lchains") %>%
+  mutate(month = gsub("Lchains ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "12")))
+
+ggplot(Lchains_long, aes(x = month, y = Lchains)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "ЛЦН, нг/мл",
+    title = "Значения показателя Легкие цепи нейрофиламента по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+ggplot(Lchains_long, aes(x = month, y = Lchains, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  labs(
+    x = "Месяц наблюдения",
+    y = "ЛЦН, нг/мл",
+    title = "Уровень легких цепей нейрофиламента в группах терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "right",
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
+  )
+```
+
+## Белок S 100 (мкг/мл) по визитам
+```{r}
+S100_long <- merged_data %>%
+  select(Treatment,`S100 0`, `S100 3`, `S100 6`, `S100 12`) %>% 
+  pivot_longer(cols = c(`S100 0`, `S100 3`, `S100 6`, `S100 12`),
+               names_to = "month",
+               values_to = "S100") %>%
+  mutate(month = gsub("S100 ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "12")))
+
+ggplot(S100_long, aes(x = month, y = S100)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Белок S 100, мкг/мл",
+    title = "Значения показателя Белок S 100 по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+```{r}
+ggplot(S100_long, aes(x = month, y = S100, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  labs(
+    x = "Месяц наблюдения",
+    y = "S100, мкг/мл",
+    title = "Уровень белка S100 в группах терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "right",
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
+  )
+```
+
+## Общий холестерин (ммоль/л) по визитам
+
+```{r}
+Cholesterol_long <- merged_data %>%
+  select(`Cholesterol 0`, `Cholesterol 6`, `Cholesterol 12`) %>% 
+  pivot_longer(cols = c(`Cholesterol 0`, `Cholesterol 6`, `Cholesterol 12`),
+               names_to = "month",
+               values_to = "Cholesterol") %>%
+  mutate(month = gsub("Cholesterol ", "", month),
+         month = factor(month, levels = c("0", "6", "12")))
+
+ggplot(Cholesterol_long, aes(x = month, y = Cholesterol)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Общий холестерин, ммоль/л",
+    title = "Значения показателя Общий холестерин по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+## Липопротеины низкой плотности (ммоль/л) по визитам
+```{r}
+LDL_long <- merged_data %>%
+  select(`LDL 0`, `LDL 6`, `LDL 12`) %>% 
+  pivot_longer(cols = c(`LDL 0`, `LDL 6`, `LDL 12`),
+               names_to = "month",
+               values_to = "LDL") %>%
+  mutate(month = gsub("LDL ", "", month),
+         month = factor(month, levels = c("0", "6", "12")))
+
+ggplot(LDL_long, aes(x = month, y = LDL)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Липопротеины низкой плотности, ммоль/л",
+    title = "Значения показателя Липопротеины низкой плотности по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+## Триглицериды (ммоль/л) по визитам
+```{r}
+TG_long <- merged_data %>%
+  select(`TG 0`, `TG 6`, `TG 12`) %>% 
+  pivot_longer(cols = c(`TG 0`, `TG 6`, `TG 12`),
+               names_to = "month",
+               values_to = "TG") %>%
+  mutate(month = gsub("TG ", "", month),
+         month = factor(month, levels = c("0", "6", "12")))
+
+ggplot(TG_long, aes(x = month, y = TG)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Триглицериды, ммоль/л",
+    title = "Значения показателя Триглицериды по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+## ИМТ по визитам
+```{r}
+BMI_long <- merged_data %>%
+  select(ID, Treatment, `BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`) %>% 
+  pivot_longer(cols = c(`BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`),
+               names_to = "month",
+               values_to = "BMI") %>%
+  mutate(month = gsub("BMI ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "9", "12")))
+
+ggplot(BMI_long, aes(x = month, y = BMI, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  labs(
+    x = "Месяц наблюдения",
+    y = "ИМТ, кг/м²",
+    title = "Динамика ИМТ по визитам и группам терапии"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.position = "right",
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
+  )
+```
+## MOCA по визитам
+```{r}
+MOCA_long <- merged_data %>%
+  select(Treatment, `MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`) %>% 
+  pivot_longer(cols = c(`MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`),
+               names_to = "month",
+               values_to = "MOCA") %>%
+  mutate(month = gsub("MOCA ", "", month),
+         month = factor(month, levels = c("0", "3", "6", "9", "12")))
+
+ggplot(MOCA_long, aes(x = month, y = MOCA, fill = Treatment)) +
+  geom_boxplot(position = position_dodge(width = 0.8), 
+               alpha = 0.8, color = "gray30") +
+  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Шкала MOCA, балл",
+    title = "Распределение баллов Монреальской шкалы по визитам в группах терапии"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.3))
+```
+## Креатинин по визитам
+```{r}
+creat_long <- merged_data %>%
+  select(`Creatinine 0`, `Creatinine 6`, `Creatinine 12`) %>% 
+  pivot_longer(cols = c(`Creatinine 0`, `Creatinine 6`, `Creatinine 12`),
+               names_to = "month",
+               values_to = "Creatinine") %>%
+  mutate(month = gsub("Creatinine ", "", month),
+         month = factor(month, levels = c("0", "6", "12")))
+
+ggplot(creat_long, aes(x = month, y = Creatinine)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "Креатинин, мкмоль/л",
+    title = "Распределение креатинина по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+## СКФ по визитам
+```{r}
+GFR_long <- merged_data %>%
+  select(`GFR0`, `GFR 6`, `GFR 12`) %>% 
+  pivot_longer(cols = c(`GFR0`, `GFR 6`, `GFR 12`),
+               names_to = "month",
+               values_to = "GFR") %>%
+  mutate(month = gsub("[^0-9]", "", month),
+         month = factor(month, levels = c("0", "6", "12")))
+
+ggplot(GFR_long, aes(x = month, y = GFR)) +
+  geom_boxplot() +
+  labs(
+    x = "Месяц наблюдения",
+    y = "СКФ, кг/м²/1.73",
+    title = "Распределение СКФ по визитам"
+  ) +
+  theme_bw()+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+```{r fig.width = 8, fig.height = 10, results='asis'}
+
+data_renamed <- data
+
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 0"] <- "HbA1c_00"
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 3"] <- "HbA1c_03"
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 6"] <- "HbA1c_06"
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 9"] <- "HbA1c_09"
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 12"] <- "HbA1c_12"
+vars_of_interest <- c("HbA1c_00", "HbA1c_03", "HbA1c_06", "HbA1c_09", "HbA1c_12")
+
+data_subset <- data_renamed[, vars_of_interest, drop = FALSE]
+
+colnames(data_subset) <- c("Hb_00", "Hb_03", "Hb_06", "Hb_09", "Hb_12")
+
+md_pattern_result <- md.pattern(data_subset, plot = TRUE)
+title(main = "Паттерны пропущенных данных HbA1c", 
+      line = 2, 
+      cex.main = 1.2,
+      adj = 0.5)
+
+colnames(md_pattern_result)[1:5] <- c("Месяц 0", "Месяц 3", "Месяц 6", "Месяц 9", "Месяц 12")
+
+print(md_pattern_result)
+```
+```{r fig.width = 8, fig.height = 10, results='asis'}
+data_filtered <- subset(data, Treatment %in% c("SGLT2i", "GLP1"))
+
+vars_of_interest <- c("HbA1c 0", "HbA1c 3", "HbA1c 6", "HbA1c 9", "HbA1c 12")
+data_subset <- data_filtered[, vars_of_interest, drop = FALSE]
+
+colnames(data_subset) <- c("Hb_00", "Hb_03", "Hb_06", "Hb_09", "Hb_12")
+
+md_pattern_result <- md.pattern(data_subset, plot = TRUE)
+title(main = "Паттерны пропущенных данных HbA1c в группах SGLT2i и GLP1", 
+      line = 2, 
+      cex.main = 1.2,
+      adj = 0.5)
+
+colnames(md_pattern_result)[1:5] <- c("Месяц 0", "Месяц 3", "Месяц 6", "Месяц 9", "Месяц 12")
+
+
+
+print(md_pattern_result)
+```
+```{r}
+
+```
+
+```{r}
+install.packages("dagitty")
+library(dagitty)
+library(ggplot2)
+```
+
+```{r}
+naniar::miss_prop_summary(merged_data)
+naniar::miss_var_summary(merged_data)
+naniar::gg_miss_var(merged_data)
+naniar::gg_miss_case(merged_data)
+naniar::gg_miss_upset(merged_data)
+```
+```{r}
+VIM::aggr(merged_data)
+mice::md.pattern(merged_data)
+```
+
+```{r}
+selected_data <- merged_data %>%
+  select(-'Cholesterol 0', -'Cholesterol 6', -'Cholesterol 12', -'LDL 0', - 'LDL 6', -'LDL 12', - 'TG 0', -'TG 6', -'TG 12', -'Kidney disease', -'Kidney disease stage', -'Albuminuria', -'Creatinine 0', -'Creatinine 6', -'Creatinine 12', -'GFR0', -'GFR 6',-'GFR 12', -'Polineuropathy investigator')
+```
+
+```{r}
+naniar::mcar_test(selected_data)
+```
+
+```{r}
+naniar::add_any_miss(selected_data) |> 
+    gtsummary::tbl_summary(
+        by = any_miss_all
+    ) |> 
+    gtsummary::add_p()
+```
+
+```{r}
+imp <- mice(
+    selected_data,
+    m = 10, 
+    maxit = 10, 
+    printFlag = FALSE, 
+    seed = 42
+)
+
+imp$predictorMatrix
+imp$method
+```
+
+
+```{r}
+data_long <- selected_data %>%
+  pivot_longer(
+    cols = matches("\\s[0-9]+$"),  
+    names_to = c(".value", "time"), 
+    names_sep = " "  
+  )
+
+data_long$time <- as.numeric(data_long$time)
+
+glimpse(data_long)
+
+```
+
+```{r}
+data_long_f <- data_long %>%
+  filter(Treatment != "метформин")
+```
+
+# Смешанная модель для оценки MOCA 
+
+Только для различий между иНГЛТ-2 и ГПП-1. Модель включает взаимодействие лечения и времени. 
+```{r}
+library(lme4)
+library(emmeans)
+model_scales <- lmer(MOCA ~ Treatment*time + Age + Sex + HbA1c + 
+                       Hypertension + (1 | ID),
+                     data = data_long_f)
+emmeans_treatment <- emmeans(model_scales, specs = pairwise ~ Treatment)
+summary(emmeans_treatment$emmeans)
+summary(emmeans_treatment$contrasts) 
+```
+# Модель для MMSE 
+```{r}
+model_scales2 <- lmer(MMSE ~ Treatment*time + Age + Sex + HbA1c + 
+                       Hypertension + (1 | ID),
+                     data = data_long_f)
+emmeans_treatment2 <- emmeans(model_scales2, specs = pairwise ~ Treatment)
+summary(emmeans_treatment2$emmeans)
+summary(emmeans_treatment2$contrasts) 
+```
+# Модель для NSE
+
+```{r}
+model_scales3 <- lmer(NSE ~ Treatment*time + Age + Sex + HbA1c + 
+                       Hypertension + (1 | ID),
+                     data = data_long_f)
+emmeans_treatment3 <- emmeans(model_scales3, specs = pairwise ~ Treatment)
+summary(emmeans_treatment3$emmeans)
+summary(emmeans_treatment3$contrasts) 
+```
+# Модель для легких цепей
+```{r}
+model_scales4 <- lmer(Lchains ~ Treatment*time + Age + Sex + HbA1c + 
+                       Hypertension + (1 | ID),
+                     data = data_long_f)
+emmeans_treatment4 <- emmeans(model_scales4, specs = pairwise ~ Treatment)
+summary(emmeans_treatment4$emmeans)
+summary(emmeans_treatment4$contrasts) 
+```
+
+# Модель для S100
+```{r}
+model_scales5 <- lmer(S100 ~ Treatment*time + Age + Sex + HbA1c + 
+                       Hypertension + (1 | ID),
+                     data = data_long_f)
+emmeans_treatment5 <- emmeans(model_scales5, specs = pairwise ~ Treatment)
+summary(emmeans_treatment5$emmeans)
+summary(emmeans_treatment5$contrasts) 
+```
+
