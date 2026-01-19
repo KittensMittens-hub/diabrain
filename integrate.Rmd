@@ -823,12 +823,49 @@ glimpse(data_long)
 ```{r}
 data_long_f <- data_long %>%
   filter(Treatment != "метформин")
+data_long_f$time_f <- factor(data_long_f$time, levels = c(0, 3, 6, 9, 12))
 ```
 
 # Смешанная модель для оценки MOCA 
 
-Только для различий между иНГЛТ-2 и ГПП-1. Модель включает взаимодействие лечения и времени. 
+## Разные модели 
 
+Базовая MOCA ~ Treatment + time + Age + Sex + HbA1c + Hypertension + (1 | ID)
+Время и лечение: MOCA ~ Treatment * time + Age + Sex + HbA1c + Hypertension + (1 | ID)
+Лечение и возраст: MOCA ~ Treatment * Age + time + Sex + HbA1c + Hypertension + (1 | ID)
+Лечение и ГГ: MOCA ~ Treatment * HbA1c + time + Age + Sex + Hypertension + (1 | ID)
+
+Тестирование: 
+1) Вероятно, динамика MOCA во времени не зависит от лечения
+```{r}
+m1 <- lmer(MOCA ~ Treatment + time + Age + Sex + HbA1c + Hypertension + (1 | ID), data_long_f)
+m2 <- lmer(MOCA ~ Treatment*time + Age + Sex + HbA1c + Hypertension + (1 | ID), data_long_f)
+anova(m1,m2)
+```
+
+2) Вероятно, эффект от лечения не зависит от возраста 
+```{r}
+m3 <- lmer(MOCA ~ Treatment * Age + time + Sex + HbA1c + Hypertension + (1 | ID), data_long_f)
+anova(m1,m3)
+```
+3) Вероятно, эффект от лечения не зависит от ГГ 
+
+```{r}
+m4 <- lmer(MOCA ~ Treatment * HbA1c + time + Age + Sex + Hypertension + (1 | ID), data_long_f)
+anova(m1,m4)
+```
+4) Вероятно, эффект от лечения не зависит от пола
+
+```{r}
+m5 <- lmer(MOCA ~ Treatment*Sex + HbA1c + time + Age + Hypertension + (1 | ID), data_long_f)
+anova(m1,m5)
+```
+
+5) Вероятно, эффект от лечения не зависит от наличия ГБ 
+```{r}
+m6 <- lmer(MOCA ~ Treatment*Hypertension + Sex + HbA1c + time + Age + (1 | ID), data_long_f)
+anova(m1,m6)
+```
 ```{r}
 ```
 
@@ -851,8 +888,10 @@ emmeans_treatment %>%
   contrast("pairwise", infer = TRUE)
 ```
 
-почитать про сетки 
-emmeans
+```{r}
+anova(model_scales)
+```
+
 
 # Модель для MMSE 
 ```{r}
