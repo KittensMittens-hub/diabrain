@@ -780,8 +780,22 @@ selected_data <- merged_data %>%
   select(-'Cholesterol 0', -'Cholesterol 6', -'Cholesterol 12', -'LDL 0', - 'LDL 6', -'LDL 12', - 'TG 0', -'TG 6', -'TG 12', -'Kidney disease', -'Kidney disease stage', -'Albuminuria', -'Creatinine 0', -'Creatinine 6', -'Creatinine 12', -'GFR0', -'GFR 6',-'GFR 12', -'Polineuropathy investigator')
 ```
 
+
+
+
 ```{r}
+selected_data <- selected_data %>%
+  mutate(across(where(is.character), as.numeric),
+         across(where(is.factor), as.numeric),
+         across(where(is.logical), as.numeric))
+selected_data <- selected_data %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.infinite(.), NA, .)))
+selected_data <- selected_data %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.nan(.), NA, .)))
 naniar::mcar_test(selected_data)
+```
+```{r}
+result <- mcar_test(selected_data, method = "little")
 ```
 
 ```{r}
@@ -866,8 +880,7 @@ anova(m1,m5)
 m6 <- lmer(MOCA ~ Treatment*Hypertension + Sex + HbA1c + time + Age + (1 | ID), data_long_f)
 anova(m1,m6)
 ```
-```{r}
-```
+
 
 ```{r}
 library(lme4)
@@ -888,9 +901,28 @@ emmeans_treatment %>%
   contrast("pairwise", infer = TRUE)
 ```
 
+
 ```{r}
-anova(model_scales)
+model_scales1 <- lmer(MOCA ~ Treatment * Age + time + Sex + HbA1c + Hypertension + (1 | ID), data_long_f)
+
+emmeans_treatment1 <- emmeans(model_scales1, specs = ~ Treatment |  Age)
+nd1 <- expand.grid(Treatment = unique(data_long_f$Treatment), 
+                  Age = mean(data_long_f$Age, na.rm = TRUE), 
+                  time = unique(data_long_f$time),
+             Sex = unique(data_long_f$Sex), 
+             HbA1c = mean(data_long_f$HbA1c, na.rm = TRUE), 
+             Hypertension = unique(data_long_f$Hypertension)
+              ) %>% drop_na()
+
+predict(model_scales1, newdata = nd1, re.form = NA)
+
+nd1$predict <- predict(model_scales1, newdata = nd1, re.form = NA)
+nd1
+emmeans_treatment1 %>% 
+  contrast("pairwise", infer = TRUE)
 ```
+
+
 
 
 # Модель для MMSE 
