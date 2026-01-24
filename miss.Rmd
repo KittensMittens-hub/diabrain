@@ -1,0 +1,184 @@
+---
+title: "last_part"
+output: html_document
+date: "2026-01-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readxl)
+library(dplyr)
+library(gtsummary)
+library(tidyr)
+library(gtsummary)
+library(ggplot2)
+library(mice)
+library(tidyverse)
+library(naniar)
+library(VIM)
+```
+
+```{r}
+selected_d <- readRDS("clean_data/diabrain.rds") %>%
+  select(
+    Age, Sex, `HbA1c level`, `DM duration`,
+    `HbA1c 0`, `HbA1c 3`, `HbA1c 6`, `HbA1c 9`, `HbA1c 12`,
+    `NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`,
+    `Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`,
+    `S100 0`, `S100 3`, `S100 6`, `S100 12`,
+    `BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`,
+    `GFR0`, `GFR 6`, `GFR 12`,
+    `MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`,
+    `MMSE 0`, `MMSE 3`, `MMSE 6`, `MMSE 9`, `MMSE 12`
+  )
+```
+
+# Паттерны пропущенных значений 
+
+```{r}
+naniar::miss_prop_summary(selected_d)
+naniar::miss_var_summary(selected_d )
+naniar::gg_miss_var(selected_d)
+naniar::gg_miss_case(selected_d )
+naniar::gg_miss_upset(selected_d )
+```
+
+
+```{r}
+naniar::add_any_miss(selected_d) |> 
+    gtsummary::tbl_summary(
+        by = any_miss_all
+    ) |> 
+    gtsummary::add_p()
+```
+```{r fig.width = 8, fig.height = 10, results='asis'}
+
+data_renamed <- selected_d
+
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 0"] <- "HbA1c_00"
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 3"] <- "HbA1c_03"
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 6"] <- "HbA1c_06"
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 9"] <- "HbA1c_09"
+colnames(data_renamed)[colnames(data_renamed) == "HbA1c 12"] <- "HbA1c_12"
+vars_of_interest <- c("HbA1c_00", "HbA1c_03", "HbA1c_06", "HbA1c_09", "HbA1c_12")
+
+data_subset <- data_renamed[, vars_of_interest, drop = FALSE]
+
+colnames(data_subset) <- c("Hb_00", "Hb_03", "Hb_06", "Hb_09", "Hb_12")
+
+md_pattern_result <- md.pattern(data_subset, plot = TRUE)
+title(main = "Паттерны пропущенных данных HbA1c", 
+      line = 2, 
+      cex.main = 1.2,
+      adj = 0.5)
+
+colnames(md_pattern_result)[1:5] <- c("Месяц 0", "Месяц 3", "Месяц 6", "Месяц 9", "Месяц 12")
+
+print(md_pattern_result)
+```
+```{r fig.width = 8, fig.height = 10, results='asis'}
+data_renamed1 <- selected_d
+
+colnames(data_renamed1)[colnames(data_renamed1) == "NSE 0"] <- "NSE_00"
+colnames(data_renamed1)[colnames(data_renamed1) == "NSE 3"] <- "NSE_03"
+colnames(data_renamed1)[colnames(data_renamed1) == "NSE 6"] <- "NSE_06"
+colnames(data_renamed1)[colnames(data_renamed1) == "NSE 12"] <- "NSE_12"
+
+vars_of_interest1 <- c("NSE_00", "NSE_03", "NSE_06", "NSE_12")
+
+data_subset1 <- data_renamed1[, vars_of_interest1, drop = FALSE]
+
+colnames(data_subset1) <- c("NSE_00", "NSE_03", "NSE_06", "NSE_12")
+
+md_pattern_result1 <- md.pattern(data_subset1, plot = TRUE)
+title(main = "Паттерны пропущенных данных NSE", 
+      line = 2, 
+      cex.main = 1.2,
+      adj = 0.5)
+
+colnames(md_pattern_result1)[1:4] <- c("Месяц 0", "Месяц 3", "Месяц 6", "Месяц 12")
+
+print(md_pattern_result1)
+```
+```{r fig.width = 8, fig.height = 10, results='asis'}
+data_renamed2 <- selected_d
+
+colnames(data_renamed2)[colnames(data_renamed2) == "Lchains 0"] <- "Lch_00"
+colnames(data_renamed2)[colnames(data_renamed2) == "Lchains 3"] <- "Lch_03"
+colnames(data_renamed2)[colnames(data_renamed2) == "Lchains 6"] <- "Lch_06"
+colnames(data_renamed2)[colnames(data_renamed2) == "Lchains 12"] <- "Lch_12"
+
+vars_of_interest2 <- c("Lch_00", "Lch_03", "Lch_06", "Lch_12")
+
+data_subset2 <- data_renamed2[, vars_of_interest2, drop = FALSE]
+
+colnames(data_subset2) <- c("Lch_00", "Lch_03", "Lch_06", "Lch_12")
+
+md_pattern_result2 <- md.pattern(data_subset2, plot = TRUE)
+title(main = "Паттерны пропущенных данных Lchains", 
+      line = 2, 
+      cex.main = 1.2,
+      adj = 0.5)
+
+colnames(md_pattern_result2)[1:4] <- c("Месяц 0", "Месяц 3", "Месяц 6", "Месяц 12")
+
+print(md_pattern_result2)
+```
+
+```{r fig.width = 8, fig.height = 10, results='asis'}
+data_renamed3 <- selected_d
+
+colnames(data_renamed3)[colnames(data_renamed3) == "S100 0"] <- "S100_00"
+colnames(data_renamed3)[colnames(data_renamed3) == "S100 3"] <- "S100_03"
+colnames(data_renamed3)[colnames(data_renamed3) == "S100 6"] <- "S100_06"
+colnames(data_renamed3)[colnames(data_renamed3) == "S100 12"] <- "S100_12"
+
+vars_of_interest3 <- c("S100_00", "S100_03", "S100_06", "S100_12")
+
+data_subset3 <- data_renamed3[, vars_of_interest3, drop = FALSE]
+
+colnames(data_subset3) <- c("S100_00", "S100_03", "S100_06", "S100_12")
+
+md_pattern_result3 <- md.pattern(data_subset3, plot = TRUE)
+title(main = "Паттерны пропущенных данных S100", 
+      line = 2, 
+      cex.main = 1.2,
+      adj = 0.5)
+
+colnames(md_pattern_result3)[1:4] <- c("Месяц 0", "Месяц 3", "Месяц 6", "Месяц 12")
+
+print(md_pattern_result3)
+```
+```{r}
+imp <- mice(
+    selected_d,
+    m = 10, 
+    maxit = 10, 
+    printFlag = FALSE, 
+    seed = 42
+)
+
+imp$predictorMatrix
+imp$method
+```
+```{r}
+traceplot(imp, c("HbA1c 0", "HbA1c 3", "HbA1c 6", "HbA1c 9", "HbA1c 12"))
+```
+
+
+```{r}
+plot(imp, c("`HbA1c 0`", "`HbA1c 3`", "`HbA1c 6`", "`HbA1c 9`", "`HbA1c 12`"))
+```
+
+```{r}
+library(lattice)
+densityplot(imp, scales = list(x = list(relation = "free"), 
+                               y = list(relation = "free")))
+```
+```{r}
+bwplot(imp)
+```
+
