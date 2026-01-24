@@ -124,7 +124,7 @@ if (all(c("Treatment", "MOCA 12") %in% names(merged_data))) {
 ```{r}
 md_any <- naniar::add_any_miss(merged_data)
 
-baseline_vars <- intersect(c("Treatment","Age","Sex","DM duration","HbA1c 0","Hypertension"), names(md_any))
+baseline_vars <- intersect(c("Treatment","Age","Sex","DM duration","HbA1c 0","Hypertension", "Stroke", "Polineuropathy"), names(md_any))
 
 if (length(baseline_vars) > 0) {
   tmp <- md_any %>% select(any_miss_all, all_of(baseline_vars))
