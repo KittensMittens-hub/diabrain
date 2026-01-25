@@ -152,33 +152,31 @@ colnames(md_pattern_result3)[1:4] <- c("Месяц 0", "Месяц 3", "Меся
 
 print(md_pattern_result3)
 ```
-```{r}
-imp <- mice(
-    selected_d,
+```{r }
+selected_d_clean <- selected_d
+colnames(selected_d_clean) <- gsub(" ", "_", colnames(selected_d_clean))
+imp_clean <- mice(
+    selected_d_clean,
     m = 10, 
     maxit = 10, 
     printFlag = FALSE, 
     seed = 42
 )
 
-imp$predictorMatrix
-imp$method
-```
-```{r}
-traceplot(imp, c("HbA1c 0", "HbA1c 3", "HbA1c 6", "HbA1c 9", "HbA1c 12"))
+plot(imp_clean)
 ```
 
 
-```{r}
-plot(imp, c("`HbA1c 0`", "`HbA1c 3`", "`HbA1c 6`", "`HbA1c 9`", "`HbA1c 12`"))
+
+
+```{r fig.width = 8, fig.height = 10, results='asis'}
+bwplot(imp_clean)
 ```
 
 ```{r}
-library(lattice)
-densityplot(imp, scales = list(x = list(relation = "free"), 
-                               y = list(relation = "free")))
+densityplot(imp_clean)
 ```
-```{r}
-bwplot(imp)
-```
+
+
+
 
