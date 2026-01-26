@@ -75,15 +75,6 @@ allvariablstatic <- function(selection) {
     as_grouped_data(groups = 'Variable')
 }
 
-# категориальные признаки
-allvariablstatic_cat <- function(selection) {
-  merged_data %>%
-  select(all_of({{selection}})) %>% 
-  summarise( 
-    across(everything(), statistic2)
-    ) %>% 
-  pivot_longer(everything(), names_to = c('Variable', 'Statistic'), names_sep = '_', values_to = 'Valuetotal') }
-
 #Функция создания DF по группам лечения (количественные признаки)
 variablstatic <- function(tratgr, selection) {
   merged_data %>%
@@ -96,22 +87,12 @@ variablstatic <- function(tratgr, selection) {
     as_grouped_data(groups = 'Variable')
 }
 
-#Функция создания DF по группам лечения (качественные признаки)
-variablstatic_cat <- function(tratgr, selection) {
-  merged_data %>%
-  filter(Treatment == {{tratgr}}) %>% 
-  select(Treatment, all_of({{selection}})) %>% 
-  summarise( 
-    across(!Treatment, statistic2)
-    ) %>% 
-  pivot_longer(everything(), names_to = c('Variable', 'Statistic'), names_sep = '_', values_to = 'Valueyes')}
-
 
 #функция объединения DF
 databinding <- function(total, metamorf, GLP1, SGLT2i) {
   {{total}} %>% 
-  bind_cols({{metamorf}}[,3]) %>% 
   bind_cols({{GLP1}}[,3]) %>% 
+  bind_cols({{metamorf}}[,3]) %>% 
   bind_cols({{SGLT2i}}[,3]) %>% 
   as_grouped_data(groups = 'Variable') %>% 
   filter(!if_all(everything(), is.na))
@@ -141,7 +122,7 @@ as_flextable(demogranalisis_col) %>%
   bg(part = "header", bg = "cornsilk") %>% 
   bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
   align(part = 'all', align = 'center') %>% 
-  set_header_labels(Valuetotal = 'All', ...4 = 'Metformin', ...5 = 'GLP1', ...6 = 'SGLT2i') %>%
+  set_header_labels(Valuetotal = 'All', ...4 = 'GLP1', ...5 = 'Metformin', ...6 = 'SGLT2i') %>%
   set_table_properties(layout = 'autofit', width = 0.65) 
 
 ```
@@ -165,12 +146,6 @@ merged_data %>%
     type = all_continuous() ~ "categorical",
     statistic = all_categorical() ~ "{n} ({p}%)")%>% 
   add_overall() %>%
-   modify_header(
-    stat_1 = "**Metformin**",
-    stat_2 = "**GLP1**",
-    stat_3 = "**SGLT2i**",
-    stat_0 = "**Overall**"
-  ) %>%
   modify_footnote(everything() ~ NA) %>%
   as_flex_table() %>% 
   theme_box() %>% 
@@ -203,7 +178,7 @@ as_flextable(diabanalisis_col) %>%
   bg(part = "header", bg = "cornsilk") %>% 
   bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
   align(part = 'all', align = 'center') %>% 
-  set_header_labels(Valuetotal = 'All', ...4 = 'Metformin', ...5 = 'GLP1', ...6 = 'SGLT2i') %>%
+  set_header_labels(Valuetotal = 'All', ...4 = 'GLP1', ...5 = 'Metformin', ...6 = 'SGLT2i') %>%
   set_table_properties(layout = 'autofit', width = 0.65) 
 
 ```
@@ -228,12 +203,6 @@ merged_data %>%
     type = all_continuous() ~ "categorical",
     statistic = all_categorical() ~ "{n} ({p}%)")%>% 
   add_overall() %>%
-   modify_header(
-    stat_1 = "**Metformin**",
-    stat_2 = "**GLP1**",
-    stat_3 = "**SGLT2i**",
-    stat_0 = "**Overall**"
-  ) %>%
   modify_footnote(everything() ~ NA) %>%
   as_flex_table() %>% 
   theme_box() %>% 
@@ -243,6 +212,7 @@ merged_data %>%
   align(part = 'all', align = 'center') %>% 
   set_table_properties(layout = 'autofit', width = 0.65)
 ```
+
 
 
 
