@@ -53,15 +53,6 @@ statistic <- list(
     paste0(min_val, ' - ', max_val)
   }
 )
-  'NA' = ~sum(is.na(.x)) %>% as.character(),
-  'N' = ~sum(!is.na(.x)) %>% as.character(),
-  'Mean' = ~round(mean(.x, na.rm = T), 1) %>% as.character(),
-  'Median' = ~round(median(.x, na.rm = T),1) %>% as.character(),
-  'Sd' = ~sd(.x, na.rm = T) %>% round(2) %>% as.character(),
-  'Q1-Q3' = ~paste0(round(quantile(.x, .25, na.rm = TRUE), 1), ' - ',
-                             round(quantile(.x, .75, na.rm = TRUE),1)),
-  'Min-Max' = ~paste0(round(min(.x, na.rm = T),1), ' - ', round(max(.x, na.rm = T),1)) %>% as.character()
-  )
 ```
 
 ```{r}
