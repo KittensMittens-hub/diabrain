@@ -37,7 +37,6 @@ merged_data <- merged_data %>%
 ```{r}
 #создаем лист со статистикой для количественных признаков
 statistic <- list(
-<<<<<<< HEAD
   'NA' = function(x) as.character(sum(is.na(x))),
   'N' = function(x) as.character(sum(!is.na(x))),
   'Mean' = function(x) as.character(round(mean(x, na.rm = TRUE), 1)),
@@ -54,7 +53,6 @@ statistic <- list(
     paste0(min_val, ' - ', max_val)
   }
 )
-=======
   'NA' = ~sum(is.na(.x)) %>% as.character(),
   'N' = ~sum(!is.na(.x)) %>% as.character(),
   'Mean' = ~round(mean(.x, na.rm = T), 1) %>% as.character(),
@@ -64,7 +62,6 @@ statistic <- list(
                              round(quantile(.x, .75, na.rm = TRUE),1)),
   'Min-Max' = ~paste0(round(min(.x, na.rm = T),1), ' - ', round(max(.x, na.rm = T),1)) %>% as.character()
   )
->>>>>>> 01d7f92dd3fbfe94bd92c747e91b85797d1ce46a
 ```
 
 ```{r}
