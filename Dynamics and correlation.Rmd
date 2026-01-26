@@ -106,10 +106,10 @@ ggplot() +
   scale_x_discrete(expand = c(0.05, 0.05))+
   scale_fill_brewer(palette = "Set2", name = "Терапия")+
   scale_color_brewer(palette = "Set2", name = "Терапия")+
-  labs(title = "График динамики уровня нейронспецифической енолазы \nпо визитам и группам терапии",
-       caption = "Среднее значение ± SEM",
-       x = "Месяц",
-       y = "NSE, нг/мл") +
+  labs(title = "Neuron-specific enolase dynamic by treatment",
+       caption = "Mean ± SEM",
+       x = "Month",
+       y = "NSE, ng/ml") +
   theme(plot.caption = element_text(size = 20, hjust = 1),
         legend.position = "inside",
         legend.justification = c(0.98, 0.98))
@@ -147,22 +147,23 @@ ggplot() +
   theme(plot.caption = element_text(size = 20, hjust = 1))
 ```
 
+## Динамика белка S100
 ```{r, fig.width=15, fig.height=8}
-Lchains_long_treatment <- data_long %>% 
+S100_long <- data_long %>% 
   filter(time %in% c("0", "3", "6", "12")) %>% 
   group_by(Treatment, time) %>% 
-  summarise(mean_score = mean(Lchains, na.rm = TRUE),
-            sem_score = sd(Lchains, na.rm = TRUE) / sqrt(sum(!is.na(Lchains))), 
+  summarise(mean_score = mean(S100, na.rm = TRUE),
+            sem_score = sd(S100, na.rm = TRUE) / sqrt(sum(!is.na(S100))), 
             .groups = "drop")
 
 ggplot() +
   geom_line(data = data_long %>% filter(time %in% c("0", "3", "6", "12")),
-       aes(x = time, y = Lchains, group = ID, color = Treatment),
+       aes(x = time, y = S100, group = ID, color = Treatment),
        alpha = 0.4, size = 0.5) +
-  geom_line(data = Lchains_long_treatment, 
+  geom_line(data = S100_long, 
             aes(x = time, y = mean_score, group = Treatment, color = Treatment), 
             size = 1) +
-  geom_ribbon(data = Lchains_long_treatment,
+  geom_ribbon(data = S100_long,
               aes(x = time, group = Treatment, fill = Treatment,
                   ymin = mean_score - sem_score,
                   ymax = mean_score + sem_score),
@@ -172,14 +173,20 @@ ggplot() +
   coord_cartesian(ylim = c(0, 50))+ #обрезала немного ось y для наглядности
   scale_fill_brewer(palette = "Set2", name = "Терапия")+
   scale_color_brewer(palette = "Set2", name = "Терапия")+
-  labs(title = "График динамики уровня легких цепей нейрофиламента\nпо визитам и группам терапии",
-       caption = "Среднее значение ± SEM",
-       x = "Месяц",
-       y = "Lchains, нг/мл") +
+  labs(title = "S100 protein dynamic by treatment",
+       caption = "Mean ± SEM",
+       x = "Month",
+       y = "S100, µg/ml") +
   theme(plot.caption = element_text(size = 20, hjust = 1),
         legend.position = "inside",
         legend.justification = c(0.98, 0.98))
 ```
+
+
+
+
+
+
 
 ## Динамика уровня гликированного гемоглобина по визитам и группам терапии
 
@@ -238,9 +245,9 @@ ggplot() +
   coord_cartesian(ylim = c(5, 12))+ #обрезала немного ось y для наглядности
   scale_fill_brewer(palette = "Set2", name = "Терапия")+
   scale_color_brewer(palette = "Set2", name = "Терапия")+
-  labs(title = "График динамики уровня гликированного гемоглобина\nпо визитам и группам терапии",
-       caption = "Среднее значение ± SEM",
-       x = "Месяц",
+  labs(title = "HbA1c dynamic by treatment",
+       caption = "Mean ± SEM",
+       x = "Month",
        y = "HbA1c, %") +
   theme(plot.caption = element_text(size = 20, hjust = 1),
         legend.position = "inside",
@@ -304,10 +311,10 @@ ggplot() +
   coord_cartesian(ylim = c(19, 30))+ #обрезала немного ось y для наглядности
   scale_fill_brewer(palette = "Set2", name = "Терапия")+
   scale_color_brewer(palette = "Set2", name = "Терапия")+
-  labs(title = "Динамика распределения баллов Монреальской шкалы\nпо визитам и группам терапии",
-       caption = "Среднее значение ± SEM",
-       x = "Месяц",
-       y = "MOCA, балл") +
+  labs(title = "Monreal scale by treatment",
+       caption = "Mean ± SEM",
+       x = "Month",
+       y = "MOCA, grade") +
   theme(plot.caption = element_text(size = 20, hjust = 1),
         legend.position = "inside",
         legend.justification = c(0.98, 0.02))
@@ -370,10 +377,10 @@ ggplot() +
   coord_cartesian(ylim = c(19, 30))+ #обрезала немного ось y для наглядности
   scale_fill_brewer(palette = "Set2", name = "Терапия")+
   scale_color_brewer(palette = "Set2", name = "Терапия")+
-  labs(title = "Динамика распределения баллов краткой шкалы оценки психического статуса\nпо визитам и в группах терапии",
-       caption = "Среднее значение ± SEM",
-       x = "Месяц",
-       y = "MMSE, балл") +
+  labs(title = "The Mini Mental State Examination by treatment",
+       caption = "Mean ± SEM",
+       x = "Month",
+       y = "MMSE, grade") +
   theme(plot.caption = element_text(size = 20, hjust = 1),
         legend.position = "inside",
         legend.justification = c(0.98, 0.02))
