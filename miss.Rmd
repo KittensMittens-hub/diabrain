@@ -19,6 +19,26 @@ library(mice)
 library(tidyverse)
 library(naniar)
 library(VIM)
+library(tidyverse)
+library(gtsummary)
+library(flextable)
+```
+
+# Descriptive statistic
+
+## Preparations
+
+```{r}
+merged_data <- readRDS('clean_data/diabrain.rds')
+```
+
+```{r}
+merged_data <- merged_data %>% 
+  mutate(
+    Treatment = factor(Treatment, levels = c('метформин', 'GLP1', 'SGLT2i'))
+  ) %>% 
+  rename('baseline BMI' = 'BMI 0',
+         'baseline HbA1c' = 'HbA1c 0')
 ```
 
 ```{r}
@@ -35,6 +55,183 @@ selected_d <- readRDS("clean_data/diabrain.rds") %>%
     `MMSE 0`, `MMSE 3`, `MMSE 6`, `MMSE 9`, `MMSE 12`
   )
 ```
+
+```{r}
+#создаем лист со статистикой для количественных признаков
+statistic <- list(
+  'NA' = function(x) as.character(sum(is.na(x))),
+  'N' = function(x) as.character(sum(!is.na(x))),
+  'Mean' = function(x) as.character(round(mean(x, na.rm = TRUE), 1)),
+  'Median' = function(x) as.character(round(median(x, na.rm = TRUE), 1)),
+  'Sd' = function(x) as.character(round(sd(x, na.rm = TRUE), 2)),
+  'Q1-Q3' = function(x) {
+    q1 <- round(quantile(x, 0.25, na.rm = TRUE), 1)
+    q3 <- round(quantile(x, 0.75, na.rm = TRUE), 1)
+    paste0(q1, ' - ', q3)
+  },
+  'Min-Max' = function(x) {
+    min_val <- round(min(x, na.rm = TRUE), 1)
+    max_val <- round(max(x, na.rm = TRUE), 1)
+    paste0(min_val, ' - ', max_val)
+  }
+)
+```
+
+```{r}
+#создаем лист со статистикой для качествеенных признаков
+statistic2 <- list(
+  'NA' = ~sum(is.na(.x)) %>% as.character(),
+  'N' = ~sum(!is.na(.x)) %>% as.character()
+  )
+```
+
+```{r}
+#Функция создания DF по всем перменным (количественные признаки)
+allvariablstatic <- function(selection) {
+  merged_data %>%
+  select(all_of({{selection}})) %>% 
+  summarise( 
+    across(everything(), statistic)
+    ) %>% 
+  pivot_longer(everything(), names_to = c('Variable', 'Statistic'), names_sep = '_', values_to = 'Valuetotal') %>% 
+    as_grouped_data(groups = 'Variable')
+}
+
+#Функция создания DF по группам лечения (количественные признаки)
+variablstatic <- function(tratgr, selection) {
+  merged_data %>%
+  filter(Treatment == {{tratgr}}) %>% 
+  select(Treatment, all_of({{selection}})) %>% 
+  summarise( 
+    across(!Treatment, statistic)
+    ) %>% 
+  pivot_longer(everything(), names_to = c('Variable', 'Statistic'), names_sep = '_', values_to = 'Valueyes') %>% 
+    as_grouped_data(groups = 'Variable')
+}
+
+
+#функция объединения DF
+databinding <- function(total, metamorf, GLP1, SGLT2i) {
+  {{total}} %>% 
+  bind_cols({{GLP1}}[,3]) %>% 
+  bind_cols({{metamorf}}[,3]) %>% 
+  bind_cols({{SGLT2i}}[,3]) %>% 
+  as_grouped_data(groups = 'Variable') %>% 
+  filter(!if_all(everything(), is.na))
+}
+
+```
+
+## Demography
+```{r warning=FALSE, message = FALSE }
+#Статистика по демографическим переменным
+
+colsanaliz <- c("Age")
+
+demogrdatatotal <- allvariablstatic(selection = colsanaliz) 
+demogrdatametamorf <- variablstatic(tratgr = 'метформин', selection = colsanaliz)
+demogrdataGLP1 <- variablstatic(tratgr = 'GLP1', selection = colsanaliz)
+demogrdataSGLT2i <- variablstatic(tratgr = 'SGLT2i', selection = colsanaliz)
+
+demogranalisis_col<- databinding(total = demogrdatatotal, metamorf = demogrdatametamorf, 
+                            GLP1 = demogrdataGLP1, SGLT2i = demogrdataSGLT2i)
+
+
+as_flextable(demogranalisis_col) %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_header_labels(Valuetotal = 'All', ...4 = 'GLP1', ...5 = 'Metformin', ...6 = 'SGLT2i') %>%
+  set_table_properties(layout = 'autofit', width = 0.65) 
+
+```
+
+```{r}
+merged_data %>% 
+  select(Treatment, Sex) %>% 
+  mutate(
+    Sex = case_when(
+      Sex == '0' ~ 'Female',
+      Sex == '1' ~ 'Male',
+      TRUE ~ Sex
+    ),
+    Treatment = case_when(
+      Treatment == 'метформин' ~ "Metformin",
+      TRUE ~ Treatment
+    )
+  ) %>% 
+  tbl_summary(
+    by = Treatment,
+    type = all_continuous() ~ "categorical",
+    statistic = all_categorical() ~ "{n} ({p}%)")%>% 
+  add_overall() %>%
+  modify_footnote(everything() ~ NA) %>%
+  as_flex_table() %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = c(1), bg = "grey90", part = "body") %>%
+  merge_h_range(i = c(1), j1 = 1, j2 = 5, part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_table_properties(layout = 'autofit', width = 0.65)
+```
+## Diabetes characteristic
+
+```{r warning=FALSE, message = FALSE }
+#Статистика по демографическим переменным
+
+colsanaliz <- c("DM duration", 'baseline HbA1c', 'baseline BMI')
+
+diabdatatotal <- allvariablstatic(selection = colsanaliz) 
+diabdatametamorf <- variablstatic(tratgr = 'метформин', selection = colsanaliz)
+diabdataGLP1 <- variablstatic(tratgr = 'GLP1', selection = colsanaliz)
+diabdataSGLT2i <- variablstatic(tratgr = 'SGLT2i', selection = colsanaliz)
+
+diabanalisis_col<- databinding(total = diabdatatotal, metamorf = diabdatametamorf, 
+                            GLP1 = diabdataGLP1, SGLT2i = diabdataSGLT2i)
+
+
+as_flextable(diabanalisis_col) %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = ~ !is.na(Variable), bg = "grey90", part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_header_labels(Valuetotal = 'All', ...4 = 'GLP1', ...5 = 'Metformin', ...6 = 'SGLT2i') %>%
+  set_table_properties(layout = 'autofit', width = 0.65) 
+
+```
+
+
+```{r}
+merged_data %>% 
+  select(Treatment, `HbA1c level`) %>% 
+  mutate(
+    `HbA1c level` = case_when(
+      `HbA1c level` == '0' ~ 'Appropriate (<7%)',
+      `HbA1c level` == '1' ~ 'Inappropriate (>7%)',
+      TRUE ~ `HbA1c level`
+    ),
+    Treatment = case_when(
+      Treatment == 'метформин' ~ "Metformin",
+      TRUE ~ Treatment
+    )
+  ) %>% 
+  tbl_summary(
+    by = Treatment,
+    type = all_continuous() ~ "categorical",
+    statistic = all_categorical() ~ "{n} ({p}%)")%>% 
+  add_overall() %>%
+  modify_footnote(everything() ~ NA) %>%
+  as_flex_table() %>% 
+  theme_box() %>% 
+  bg(part = "header", bg = "cornsilk") %>% 
+  bg(i = c(1), bg = "grey90", part = "body") %>%
+  merge_h_range(i = c(1), j1 = 1, j2 = 5, part = "body") %>%
+  align(part = 'all', align = 'center') %>% 
+  set_table_properties(layout = 'autofit', width = 0.65)
+```
+
+
 
 # Паттерны пропущенных значений 
 
