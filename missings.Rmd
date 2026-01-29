@@ -1,0 +1,150 @@
+---
+title: "missings"
+output: html_document
+date: "2026-01-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(naniar)
+library(mice)
+library(VIM)
+library(ggplot2)
+```
+
+```{r}
+merged_data <- readRDS("clean_data/diabrain.rds")
+
+# общий уровень пропусков
+miss_overall <- naniar::miss_prop_summary(merged_data)
+print(miss_overall)
+
+# по переменным
+miss_by_var <- naniar::miss_var_summary(merged_data) %>%
+  arrange(desc(pct_miss))
+print(head(miss_by_var, 30))
+
+# по пациентам
+miss_by_case <- naniar::miss_case_summary(merged_data) %>%
+  arrange(desc(pct_miss))
+print(head(miss_by_case, 30))
+
+naniar::gg_miss_var(merged_data)
+naniar::gg_miss_case(merged_data)
+naniar::gg_miss_upset(merged_data)
+```
+
+```{r}
+VIM::aggr(merged_data, numbers = TRUE, sortVars = TRUE, prop = TRUE)
+
+
+mice::md.pattern(merged_data)
+
+md_num <- merged_data %>% select(where(is.numeric))
+mice::md.pattern(md_num)
+```
+
+```{r}
+# тест MCAR
+mcar_df <- merged_data %>% select(-any_of("ID"))
+try(naniar::mcar_test(mcar_df), silent = TRUE)
+
+long_blocks <- list(
+  HbA1c = c("HbA1c 0","HbA1c 3","HbA1c 6","HbA1c 9","HbA1c 12"),
+  MOCA  = c("MOCA 0","MOCA 3","MOCA 6","MOCA 9","MOCA 12"),
+  NSE   = c("NSE 0","NSE 3","NSE 6","NSE 12"),
+  S100  = c("S100 0","S100 3","S100 6","S100 12")
+)
+
+for (nm in names(long_blocks)) {
+  vars <- intersect(long_blocks[[nm]], names(merged_data))
+  if (length(vars) < 2) next
+  
+  tmp <- merged_data %>% select(all_of(vars))
+  colnames(tmp) <- gsub(" ", "_", vars)
+  
+  print(nm)
+  tmp2 <- tmp
+  colnames(tmp2) <- paste0("V", seq_len(ncol(tmp2)))
+  print(mice::md.pattern(tmp2, plot = TRUE))
+}
+```
+
+```{r}
+top_vars <- miss_by_var %>%
+slice_head(n = 25) %>%
+pull(variable)
+
+md_top <- merged_data %>% select(any_of(top_vars))
+
+VIM::aggr(md_top, numbers = TRUE, sortVars = TRUE, prop = TRUE, combined = TRUE)
+```
+
+```{r}
+completion_by_time <- function(df, prefix) {
+  v <- grep(paste0("^", prefix, " "), names(df), value = TRUE)
+  if (length(v) == 0) return(NULL)
+  
+  tibble(var = v) %>%
+  mutate(month = gsub(paste0("^", prefix, " "), "", var)) %>%
+  mutate(present_pct = sapply(v, function(x) mean(!is.na(df[[x]])) * 100)) %>%
+  arrange(as.numeric(gsub("[^0-9]", "", month)))
+}
+
+comp_hba1c <- completion_by_time(merged_data, "HbA1c")
+comp_moca <- completion_by_time(merged_data, "MOCA")
+comp_nse <- completion_by_time(merged_data, "NSE")
+comp_s100 <- completion_by_time(merged_data, "S100")
+comp_lch <- completion_by_time(merged_data, "Lchains")
+
+print(comp_hba1c)
+print(comp_moca)
+print(comp_nse)
+print(comp_s100)
+print(comp_lch)
+```
+
+```{r}
+if (all(c("Treatment", "MOCA 12") %in% names(merged_data))) {
+  md_drop <- merged_data %>%
+  mutate(reached_12 = !is.na(`MOCA 12`)) %>%
+  count(Treatment, reached_12) %>%
+  group_by(Treatment) %>%
+  mutate(pct = n / sum(n) * 100)
+  
+  print(md_drop)
+}
+```
+
+```{r}
+md_any <- naniar::add_any_miss(merged_data)
+
+baseline_vars <- intersect(c("Treatment","Age","Sex","DM duration","HbA1c 0","Hypertension", "Stroke", "Polineuropathy"), names(md_any))
+
+if (length(baseline_vars) > 0) {
+  tmp <- md_any %>% select(any_miss_all, all_of(baseline_vars))
+  print(gtsummary::tbl_summary(tmp, by = any_miss_all))
+}
+```
+
+```{r}
+merged_data %>%
+  mutate(drop_moca12 = is.na(`MOCA 12`),
+         drop_nse12  = is.na(`NSE 12`)) %>%
+  count(Treatment, drop_moca12) %>%
+  group_by(Treatment) %>%
+  mutate(pct = round(n / sum(n) * 100,1)) %>%
+  print()
+
+merged_data %>%
+  count(Treatment, drop_nse12 = is.na(`NSE 12`)) %>%
+  group_by(Treatment) %>%
+  mutate(pct = round(n / sum(n) * 100,1)) %>%
+  print()
+
+```

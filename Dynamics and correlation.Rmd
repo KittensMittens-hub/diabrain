@@ -1,0 +1,422 @@
+---
+title: "Динамика маркеров и корреляция между переменными"
+author: "Кулиева Мария"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(corrplot)
+library(Hmisc)
+```
+
+## Загрузка данных
+
+```{r}
+merged_data <- readRDS("clean_data/diabrain.rds")
+
+selected_data <- merged_data %>%
+  select(-'Cholesterol 0', -'Cholesterol 6', -'Cholesterol 12', -'LDL 0', - 'LDL 6', -'LDL 12', - 'TG 0', -'TG 6', -'TG 12', -'Kidney disease', -'Kidney disease stage', -'Albuminuria', -'Creatinine 0', -'Creatinine 6', -'Creatinine 12', -'GFR0', -'GFR 6', -'GFR 12', -'Polineuropathy investigator') %>% 
+  select(-matches("^(Shulte|Beck|Spielberg)"))
+
+data_long <- selected_data %>%
+  pivot_longer(
+    cols = matches("\\s[0-9]+$"),  
+    names_to = c(".value", "time"), 
+    names_sep = " ") %>% 
+  mutate(time = factor(time, levels = c("0", "3", "6", "9", "12"))) %>% 
+  filter(Treatment != "метформин")
+
+#data_long$time <- as.numeric(data_long$time)
+```
+
+# Тема и стандарные блоки
+
+```{r custom_theme_set}
+theme_custom <- theme(
+    axis.text = element_text(size = 20),
+    axis.title = element_text(size = 25),
+    plot.title = element_text(size = 30, hjust = 0.5),
+    plot.subtitle = element_text(size = 20, hjust = 0.5),
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 15),
+    panel.background = element_rect(fill = "white"), 
+    panel.grid = element_blank(),
+  )
+
+theme_set(theme_custom)
+```
+
+
+## Динамика уровня нейронспецифической енолазы по визитам
+
+```{r, fig.width=15, fig.height=8}
+NSE_long <- data_long %>% 
+  filter(time %in% c("0", "3", "6", "12")) %>% 
+  group_by(time) %>% 
+  summarise(mean_score = mean(NSE, na.rm = TRUE),
+            sem_score = sd(NSE, na.rm = TRUE) / sqrt(sum(!is.na(NSE))), 
+            .groups = "drop")
+
+ggplot() +
+  geom_line(data = data_long %>% filter(time %in% c("0", "3", "6", "12")),
+       aes(x = time, y = NSE, group = ID),
+       alpha = 0.4, size = 0.5) +
+  geom_line(data = NSE_long, 
+            aes(x = time, y = mean_score, group = 1), 
+            size = 1, color = "dodgerblue4") +
+  geom_ribbon(data = NSE_long,
+              aes(x = time, group = 1,
+                  ymin = mean_score - sem_score,
+                  ymax = mean_score + sem_score),
+              alpha = 0.3, fill = "lightblue", )+
+  scale_y_continuous(breaks = seq(0, 30, 5)) +
+  scale_x_discrete(expand = c(0.05, 0.05))+
+  labs(title = "График динамики уровня нейронспецифической енолазы по визитам",
+       caption = "Среднее значение ± SEM",
+       x = "Месяц",
+       y = "NSE, нг/мл") +
+  theme(plot.caption = element_text(size = 20, hjust = 1))
+```
+
+```{r, fig.width=15, fig.height=8}
+NSE_long_treatment <- data_long %>% 
+  filter(time %in% c("0", "3", "6", "12")) %>% 
+  group_by(Treatment, time) %>% 
+  summarise(mean_score = mean(NSE, na.rm = TRUE),
+            sem_score = sd(NSE, na.rm = TRUE) / sqrt(sum(!is.na(NSE))), 
+            .groups = "drop")
+
+ggplot() +
+  geom_line(data = data_long %>% filter(time %in% c("0", "3", "6", "12")),
+       aes(x = time, y = NSE, group = ID, color = Treatment),
+       alpha = 0.4, size = 0.5) +
+  geom_line(data = NSE_long_treatment, 
+            aes(x = time, y = mean_score, group = Treatment, color = Treatment), 
+            size = 1) +
+  geom_ribbon(data = NSE_long_treatment,
+              aes(x = time, group = Treatment, fill = Treatment,
+                  ymin = mean_score - sem_score,
+                  ymax = mean_score + sem_score),
+              alpha = 0.3)+
+  scale_y_continuous(breaks = seq(0, 30, 5)) +
+  scale_x_discrete(expand = c(0.05, 0.05))+
+  scale_fill_brewer(palette = "Set2", name = "Терапия")+
+  scale_color_brewer(palette = "Set2", name = "Терапия")+
+  labs(title = "Neuron-specific enolase dynamic by treatment",
+       caption = "Mean ± SEM",
+       x = "Month",
+       y = "NSE, ng/ml") +
+  theme(plot.caption = element_text(size = 20, hjust = 1),
+        legend.position = "inside",
+        legend.justification = c(0.98, 0.98))
+```
+
+## Динамика уровня легких цепей нейрофиламента по визитам
+
+```{r, fig.width=15, fig.height=8}
+Lchains_long <- data_long %>% 
+  filter(time %in% c("0", "3", "6", "12")) %>% 
+  group_by(time) %>% 
+  summarise(mean_score = mean(Lchains, na.rm = TRUE),
+            sem_score = sd(Lchains, na.rm = TRUE) / sqrt(sum(!is.na(Lchains))), 
+            .groups = "drop")
+
+ggplot() +
+  geom_line(data = data_long %>% filter(time %in% c("0", "3", "6", "12")),
+       aes(x = time, y = Lchains, group = ID),
+       alpha = 0.4, size = 0.5) +
+  geom_line(data = Lchains_long, 
+            aes(x = time, y = mean_score, group = 1), 
+            size = 1, color = "dodgerblue4") +
+  geom_ribbon(data = Lchains_long,
+              aes(x = time, group = 1,
+                  ymin = mean_score - sem_score,
+                  ymax = mean_score + sem_score),
+              alpha = 0.3, fill = "lightblue", )+
+  scale_y_continuous(breaks = seq(0, 90, 10)) +
+  scale_x_discrete(expand = c(0.05, 0.05))+
+  coord_cartesian(ylim = c(0, 50))+ #обрезала немного ось y для наглядности
+  labs(title = "График динамики уровня легких цепей нейрофиламента по визитам",
+       caption = "Среднее значение ± SEM",
+       x = "Месяц",
+       y = "Lchains, нг/мл") +
+  theme(plot.caption = element_text(size = 20, hjust = 1))
+```
+
+## Динамика белка S100
+```{r, fig.width=15, fig.height=8}
+S100_long <- data_long %>% 
+  filter(time %in% c("0", "3", "6", "12")) %>% 
+  group_by(Treatment, time) %>% 
+  summarise(mean_score = mean(S100, na.rm = TRUE),
+            sem_score = sd(S100, na.rm = TRUE) / sqrt(sum(!is.na(S100))), 
+            .groups = "drop")
+
+ggplot() +
+  geom_line(data = data_long %>% filter(time %in% c("0", "3", "6", "12")),
+       aes(x = time, y = S100, group = ID, color = Treatment),
+       alpha = 0.4, size = 0.5) +
+  geom_line(data = S100_long, 
+            aes(x = time, y = mean_score, group = Treatment, color = Treatment), 
+            size = 1) +
+  geom_ribbon(data = S100_long,
+              aes(x = time, group = Treatment, fill = Treatment,
+                  ymin = mean_score - sem_score,
+                  ymax = mean_score + sem_score),
+              alpha = 0.3)+
+  scale_y_continuous(breaks = seq(0, 90, 10)) +
+  scale_x_discrete(expand = c(0.05, 0.05))+
+  coord_cartesian(ylim = c(0, 50))+ #обрезала немного ось y для наглядности
+  scale_fill_brewer(palette = "Set2", name = "Терапия")+
+  scale_color_brewer(palette = "Set2", name = "Терапия")+
+  labs(title = "S100 protein dynamic by treatment",
+       caption = "Mean ± SEM",
+       x = "Month",
+       y = "S100, µg/ml") +
+  theme(plot.caption = element_text(size = 20, hjust = 1),
+        legend.position = "inside",
+        legend.justification = c(0.98, 0.98))
+```
+
+
+
+
+
+
+
+## Динамика уровня гликированного гемоглобина по визитам и группам терапии
+
+```{r, fig.width=15, fig.height=8}
+HbA1c_long <- data_long %>% 
+  filter(time %in% c("0", "3", "6", "9", "12")) %>% 
+  group_by(time) %>% 
+  summarise(mean_score = mean(HbA1c, na.rm = TRUE),
+            sem_score = sd(HbA1c, na.rm = TRUE) / sqrt(sum(!is.na(HbA1c))), 
+            .groups = "drop")
+
+ggplot() +
+  geom_line(data = data_long %>% filter(time %in% c("0", "3", "6", "9", "12")),
+       aes(x = time, y = HbA1c, group = ID),
+       alpha = 0.4, size = 0.5) +
+  geom_line(data = HbA1c_long, 
+            aes(x = time, y = mean_score, group = 1), 
+            size = 1, color = "dodgerblue4") +
+  geom_ribbon(data = HbA1c_long,
+              aes(x = time, group = 1,
+                  ymin = mean_score - sem_score,
+                  ymax = mean_score + sem_score),
+              alpha = 0.3, fill = "lightblue", )+
+  scale_y_continuous(breaks = seq(0, 12, 3)) +
+  scale_x_discrete(expand = c(0.05, 0.05))+
+  coord_cartesian(ylim = c(5, 12))+ #обрезала немного ось y для наглядности
+  labs(title = "График динамики уровня гликированного гемоглобина по визитам",
+       caption = "Среднее значение ± SEM",
+       x = "Месяц",
+       y = "HbA1c, %") +
+  theme(plot.caption = element_text(size = 20, hjust = 1))
+```
+
+```{r, fig.width=15, fig.height=8}
+HbA1c_long_treatment <- data_long %>% 
+  filter(time %in% c("0", "3", "6", "9", "12")) %>% 
+  group_by(Treatment, time) %>% 
+  summarise(mean_score = mean(HbA1c, na.rm = TRUE),
+            sem_score = sd(HbA1c, na.rm = TRUE) / sqrt(sum(!is.na(HbA1c))), 
+            .groups = "drop")
+
+ggplot() +
+  geom_line(data = data_long %>% filter(time %in% c("0", "3", "6", "9", "12")),
+       aes(x = time, y = HbA1c, group = ID, color = Treatment),
+       alpha = 0.4, size = 0.5) +
+  geom_line(data = HbA1c_long_treatment, 
+            aes(x = time, y = mean_score, group = Treatment, color = Treatment), 
+            size = 1) +
+  geom_ribbon(data = HbA1c_long_treatment,
+              aes(x = time, group = Treatment, fill = Treatment,
+                  ymin = mean_score - sem_score,
+                  ymax = mean_score + sem_score),
+              alpha = 0.3)+
+  scale_y_continuous(breaks = seq(0, 12, 3)) +
+  scale_x_discrete(expand = c(0.05, 0.05))+
+  coord_cartesian(ylim = c(5, 12))+ #обрезала немного ось y для наглядности
+  scale_fill_brewer(palette = "Set2", name = "Терапия")+
+  scale_color_brewer(palette = "Set2", name = "Терапия")+
+  labs(title = "HbA1c dynamic by treatment",
+       caption = "Mean ± SEM",
+       x = "Month",
+       y = "HbA1c, %") +
+  theme(plot.caption = element_text(size = 20, hjust = 1),
+        legend.position = "inside",
+        legend.justification = c(0.98, 0.98))
+```
+
+## Динамика распределения баллов Монреальской шкалы по визитам и в группах терапии
+
+```{r, fig.width=15, fig.height=8}
+MOCA_long <- data_long %>% 
+  filter(time %in% c("0", "3", "6", "9", "12")) %>% 
+  group_by(time) %>% 
+  summarise(mean_score = mean(MOCA, na.rm = TRUE),
+            sem_score = sd(MOCA, na.rm = TRUE) / sqrt(sum(!is.na(MOCA))), 
+            .groups = "drop")
+
+ggplot() +
+  geom_line(data = data_long %>% filter(time %in% c("0", "3", "6", "9", "12")),
+       aes(x = time, y = MOCA, group = ID),
+       alpha = 0.4, size = 0.5) +
+  geom_line(data = MOCA_long, 
+            aes(x = time, y = mean_score, group = 1), 
+            size = 1, color = "dodgerblue4") +
+  geom_ribbon(data = MOCA_long,
+              aes(x = time, group = 1,
+                  ymin = mean_score - sem_score,
+                  ymax = mean_score + sem_score),
+              alpha = 0.3, fill = "lightblue", )+
+  scale_y_continuous(breaks = seq(0, 30, 5)) +
+  scale_x_discrete(expand = c(0.05, 0.05))+
+  coord_cartesian(ylim = c(19, 30))+ #обрезала немного ось y для наглядности
+  labs(title = "Динамика распределения баллов Монреальской шкалы по визитам",
+       caption = "Среднее значение ± SEM",
+       x = "Месяц",
+       y = "MOCA, балл") +
+  theme(plot.caption = element_text(size = 20, hjust = 1))
+```
+
+```{r, fig.width=15, fig.height=8}
+MOCA_long_treatment <- data_long %>% 
+  filter(time %in% c("0", "3", "6", "9", "12")) %>% 
+  group_by(Treatment, time) %>% 
+  summarise(mean_score = mean(MOCA, na.rm = TRUE),
+            sem_score = sd(MOCA, na.rm = TRUE) / sqrt(sum(!is.na(MOCA))), 
+            .groups = "drop")
+
+ggplot() +
+  geom_line(data = data_long %>% filter(time %in% c("0", "3", "6", "9", "12")),
+       aes(x = time, y = MOCA, group = ID, color = Treatment),
+       alpha = 0.4, size = 0.5) +
+  geom_line(data = MOCA_long_treatment, 
+            aes(x = time, y = mean_score, group = Treatment, color = Treatment), 
+            size = 1) +
+  geom_ribbon(data = MOCA_long_treatment,
+              aes(x = time, group = Treatment, fill = Treatment,
+                  ymin = mean_score - sem_score,
+                  ymax = mean_score + sem_score),
+              alpha = 0.3)+
+  scale_y_continuous(breaks = seq(0, 30, 5)) +
+  scale_x_discrete(expand = c(0.05, 0.05))+
+  coord_cartesian(ylim = c(19, 30))+ #обрезала немного ось y для наглядности
+  scale_fill_brewer(palette = "Set2", name = "Терапия")+
+  scale_color_brewer(palette = "Set2", name = "Терапия")+
+  labs(title = "Monreal scale by treatment",
+       caption = "Mean ± SEM",
+       x = "Month",
+       y = "MOCA, grade") +
+  theme(plot.caption = element_text(size = 20, hjust = 1),
+        legend.position = "inside",
+        legend.justification = c(0.98, 0.02))
+```
+
+## Динамика распределения баллов краткой шкалы оценки психического статуса по визитам и в группах терапии
+
+```{r, fig.width=15, fig.height=8}
+MMSE_long <- data_long %>% 
+  filter(time %in% c("0", "3", "6", "9", "12")) %>% 
+  group_by(time) %>% 
+  summarise(mean_score = mean(MMSE, na.rm = TRUE),
+            sem_score = sd(MMSE, na.rm = TRUE) / sqrt(sum(!is.na(MMSE))), 
+            .groups = "drop")
+
+ggplot() +
+  geom_line(data = data_long %>% filter(time %in% c("0", "3", "6", "9", "12")),
+       aes(x = time, y = MMSE, group = ID),
+       alpha = 0.4, size = 0.5) +
+  geom_line(data = MMSE_long, 
+            aes(x = time, y = mean_score, group = 1), 
+            size = 1, color = "dodgerblue4") +
+  geom_ribbon(data = MMSE_long,
+              aes(x = time, group = 1,
+                  ymin = mean_score - sem_score,
+                  ymax = mean_score + sem_score),
+              alpha = 0.3, fill = "lightblue", )+
+  scale_y_continuous(breaks = seq(0, 30, 5)) +
+  scale_x_discrete(expand = c(0.05, 0.05))+
+  coord_cartesian(ylim = c(19, 30))+ #обрезала немного ось y для наглядности
+  labs(title = "Динамика распределения баллов краткой шкалы\nоценки психического статуса по визитам",
+       caption = "Среднее значение ± SEM",
+       x = "Месяц",
+       y = "MMSE, балл") +
+  theme(plot.caption = element_text(size = 20, hjust = 1))
+```
+
+```{r, fig.width=15, fig.height=8}
+MMSE_long_treatment <- data_long %>% 
+  filter(time %in% c("0", "3", "6", "9", "12")) %>% 
+  group_by(Treatment, time) %>% 
+  summarise(mean_score = mean(MMSE, na.rm = TRUE),
+            sem_score = sd(MMSE, na.rm = TRUE) / sqrt(sum(!is.na(MMSE))), 
+            .groups = "drop")
+
+ggplot() +
+  geom_line(data = data_long %>% filter(time %in% c("0", "3", "6", "9", "12")),
+       aes(x = time, y = MMSE, group = ID, color = Treatment),
+       alpha = 0.4, size = 0.5) +
+  geom_line(data = MMSE_long_treatment, 
+            aes(x = time, y = mean_score, group = Treatment, color = Treatment), 
+            size = 1) +
+  geom_ribbon(data = MMSE_long_treatment,
+              aes(x = time, group = Treatment, fill = Treatment,
+                  ymin = mean_score - sem_score,
+                  ymax = mean_score + sem_score),
+              alpha = 0.3)+
+  scale_y_continuous(breaks = seq(0, 30, 5)) +
+  scale_x_discrete(expand = c(0.05, 0.05))+
+  coord_cartesian(ylim = c(19, 30))+ #обрезала немного ось y для наглядности
+  scale_fill_brewer(palette = "Set2", name = "Терапия")+
+  scale_color_brewer(palette = "Set2", name = "Терапия")+
+  labs(title = "The Mini Mental State Examination by treatment",
+       caption = "Mean ± SEM",
+       x = "Month",
+       y = "MMSE, grade") +
+  theme(plot.caption = element_text(size = 20, hjust = 1),
+        legend.position = "inside",
+        legend.justification = c(0.98, 0.02))
+```
+
+## Корреляционная матрица между переменными
+
+Для оценки связи параметров были построены корреляционные матрицы с использованием коэффициента корреляции Спирмана. Итоговые таблицы представлены ниже.
+
+```{r correlation-matrix}
+correlation_matrix <- data_long %>% 
+  select(Treatment, Age, time, Sex, Hypertension, HbA1c, MOCA, MMSE, NSE, Lchains, S100) %>% 
+  mutate(Treatment = case_when(
+    Treatment == "SGLT2i" ~ 0,
+    Treatment == "GLP1" ~ 1))
+
+
+corr_matrix <- rcorr(as.matrix(correlation_matrix),
+      type = "spearman")
+
+matrix_corr <- corr_matrix$r 
+matrix_p <- corr_matrix$P
+```
+
+
+```{r correlation-matrix-vis}
+corrplot(matrix_corr,
+         method = 'color', 
+         type = 'upper',
+         addCoef.col = 'black',
+         tl.col = 'black',
+         number.cex = 0.5,
+         diag = F,
+         p.mat = matrix_p,
+         sig.level = 0.05,
+         insig = "blank", 
+         order = 'hclust',          
+         hclust.method = 'complete')
+```
