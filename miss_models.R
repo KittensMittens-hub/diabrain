@@ -1,3 +1,5 @@
+
+# Settings ----------------------------------------------------------------
 suppressPackageStartupMessages({
   library(tidyverse)
   library(patchwork)
@@ -23,6 +25,8 @@ theme_set(
 
 pd <- position_dodge(0.25)
 
+
+# Data preporcessing ------------------------------------------------------
 df <- read_rds("clean_data/diabrain.rds")
 
 # nrow(df) == n_distinct(df$ID)
@@ -56,21 +60,24 @@ df_long <- df |>
   ) |> 
   arrange(Treatment, time)
 
-# CC
+# Complete case analysis --------------------------------------------------
 df_long_cc <- df_long |> 
   drop_na(c(
     Age, Sex, BMI_0, GFR_0
   ))
 
+## Model for Metformin ----
 fit_met <- lm(
   HbA1c_0 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + GFR_0),
   data = df
 )
 
+### "counterfactual" grid
 grid_met <- df |> 
   filter(Treatment != "метформин") |> 
   mutate(Treatment = "метформин") 
 
+### "counterfactual" mean
 pred_met <- marginaleffects::avg_predictions(
   fit_met, 
   newdata = grid_met, 
@@ -78,6 +85,7 @@ pred_met <- marginaleffects::avg_predictions(
 ) |>
   as_tibble()
 
+## Longitudinal model without Metformin ----
 fit_gee_cc <- geepack::geeglm(
   value ~ (Treatment * time) * (Age + Sex + log_DM_duration + BMI_0 + GFR_0),
   id = ID,
@@ -86,18 +94,21 @@ fit_gee_cc <- geepack::geeglm(
   corstr = "independence"
 )
 
+### longitudinal "counterfactual" grid
 grid_cc <- marginaleffects::datagrid(
   model = fit_gee_cc, 
   Treatment = levels(df_long_cc$Treatment),
   grid_type = "counterfactual"
 )
 
+### longitudinal "counterfactual" means
 pred_cc <- marginaleffects::avg_predictions(
   fit_gee_cc,
   newdata = grid_cc,
   by = c("time", "Treatment")
 )
 
+### Mean difference by time
 effect_cc <- marginaleffects::avg_comparisons(
   fit_gee_cc,
   newdata = grid_cc,
@@ -132,10 +143,24 @@ effect_cc |>
   geom_point(size = 2) +
   scale_y_continuous(name = "SGLT2i − GLP1")
 
-# MICE
+### Difference with Metformin
+pred_cc |>
+  as_tibble() |>
+  transmute(
+    time, Treatment,
+    estimate = estimate - pred_met$estimate,
+    std.error = sqrt(std.error^2 + pred_met$std.error^2),
+    statistic = estimate / std.error,
+    conf.low = estimate - (qnorm(0.975) * std.error),
+    conf.high = estimate + (qnorm(0.975) * std.error),
+    p.value = 2 * pnorm(abs(statistic), lower.tail = FALSE)
+  )
+
+# MICE --------------------------------------------------------------------
 m <- 10
 it <- 10
 
+## Imputation for Metformin ----
 imp_met <- mice::mice(
   data = df,
   formulas = list(
@@ -147,6 +172,7 @@ imp_met <- mice::mice(
   printFlag = FALSE
 )
 
+## Models for Metformin ----
 fits_met <- map(seq_len(m), function(i) {
   d <- mice::complete(imp_met, i)
   fit <- lm(
@@ -164,15 +190,16 @@ fits_met <- map(seq_len(m), function(i) {
   )
 })
 
-fits_met_pooled <- mice::pool(fits_met, dfcom = Inf)$pooled |>
+### pooled "counterfactual" mean
+fits_met <- mice::pool(fits_met, dfcom = Inf)$pooled |>
   transmute(
     estimate,
     std.error = sqrt(t),
-    statistic = estimate / std.error,
     conf.low = estimate - (qnorm(0.975) * std.error),
     conf.high = estimate + (qnorm(0.975) * std.error)
   )
 
+## Imputation for longitudinal data ----
 df_for_mi <- df |> 
   filter(Treatment != "метформин") |> 
   mutate(Treatment = fct_drop(Treatment)) 
@@ -180,7 +207,6 @@ df_for_mi <- df |>
 imp_wide <- mice::mice(
   data = df_for_mi,
   formulas = list(
-    # Treatment * (Age + Sex + BMI_0 + GFR_0)
     "BMI_0" = BMI_0 ~ Treatment * (Age + Sex + log_DM_duration + GFR_0 + HbA1c_0 + HbA1c_3 + HbA1c_6 + HbA1c_9 + HbA1c_12),
     "GFR_0" = GFR_0 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + HbA1c_0 + HbA1c_3 + HbA1c_6 + HbA1c_9 + HbA1c_12),
     "HbA1c_3" = HbA1c_3 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + GFR_0 + HbA1c_0 + HbA1c_6 + HbA1c_9 + HbA1c_12),
@@ -202,6 +228,7 @@ imp_long <- lapply(seq_len(m), function(i) {
     mutate(log_DM_duration = log(DM_duration))
 })
 
+## Longitudinal models without Metformin ----
 fit_gee_mice <- map(seq_len(m), function(i) {
   d <- imp_long[[i]]
   geepack::geeglm(
@@ -213,6 +240,7 @@ fit_gee_mice <- map(seq_len(m), function(i) {
   )
 })
 
+### longitudinal "counterfactual" means
 pred_mice <- map(seq_len(m), function(i) {
   grid <- marginaleffects::datagrid(
     model = fit_gee_mice[[i]], 
@@ -226,19 +254,29 @@ pred_mice <- map(seq_len(m), function(i) {
   )
 })
 
-pred_mice <- map(seq_len(m), function(i) {
-  grid <- marginaleffects::datagrid(
-    model = fit_gee_mice[[i]], 
-    Treatment = levels(imp_long[[i]]$Treatment),
-    grid_type = "counterfactual"
-  )
-  marginaleffects::avg_predictions(
-    fit_gee_mice[[i]],
-    newdata = grid,
-    by = c("time", "Treatment")
-  )
-})
+pred_mice <- map2(
+  pred_mice[[1]]$time,
+  pred_mice[[1]]$Treatment,
+  function(x, y) {
+    map(pred_mice, function(d) {
+      d |>
+        filter(time == x & Treatment == y)
+    }) |>
+      mice::pool(dfcom = Inf) |>
+      _[["pooled"]] |>
+      transmute(
+        time = x,
+        Treatment = y,
+        estimate,
+        std.error = sqrt(t),
+        conf.low = estimate - (qnorm(0.975) * std.error),
+        conf.high = estimate + (qnorm(0.975) * std.error)
+      )
+  }
+) |>
+  reduce(bind_rows)
 
+### Mean difference by time
 effect_mice <- map(seq_len(m), function(i) {
   grid <- marginaleffects::datagrid(
     model = fit_gee_mice[[i]], 
@@ -254,5 +292,63 @@ effect_mice <- map(seq_len(m), function(i) {
   )
 })
 
+effect_mice <- map(
+  effect_mice[[1]]$time,
+  function(x) {
+    map(effect_mice, function(d) {
+      d |>
+        filter(time == x)
+    }) |>
+      mice::pool(dfcom = Inf) |>
+      _[["pooled"]] |>
+      transmute(
+        time = x,
+        estimate,
+        std.error = sqrt(t),
+        statistic = estimate / std.error,
+        conf.low = estimate - (qnorm(0.975) * std.error),
+        conf.high = estimate + (qnorm(0.975) * std.error),
+        p.value = 2 * pnorm(abs(statistic), lower.tail = FALSE)
+      )
+  }
+) |>
+  reduce(bind_rows)
 
+pred_mice |>
+  as_tibble() |>
+  ggplot(aes(time, estimate, group = Treatment, color = Treatment)) +
+  geom_line(linewidth = 0.8, alpha = 0.5) +
+  geom_errorbar(
+    aes(ymin = conf.low, ymax = conf.high),
+    position = pd, linewidth = 0.8, width = 0.1
+  ) +
+  geom_point(position = pd, color = "white", size = 3) +
+  geom_point(position = pd, size = 2) +
+  scale_color_manual(values = group_cols) +
+  scale_y_continuous(name = "HbA1c", n.breaks = 8) 
 
+effect_mice |>
+  as_tibble() |>
+  ggplot(aes(time, estimate, group = 1)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey55") +
+  geom_line(linewidth = 0.8, alpha = 0.5) +
+  geom_errorbar(
+    aes(ymin = conf.low, ymax = conf.high),
+    linewidth = 0.8, width = 0.1
+  ) +
+  geom_point(color = "white", size = 3) +
+  geom_point(size = 2) +
+  scale_y_continuous(name = "SGLT2i − GLP1")
+
+### Difference with Metformin
+pred_mice |>
+  as_tibble() |>
+  transmute(
+    time, Treatment,
+    estimate = estimate - fits_met$estimate,
+    std.error = sqrt(std.error^2 + fits_met$std.error^2),
+    statistic = estimate / std.error,
+    conf.low = estimate - (qnorm(0.975) * std.error),
+    conf.high = estimate + (qnorm(0.975) * std.error),
+    p.value = 2 * pnorm(abs(statistic), lower.tail = FALSE)
+  )
