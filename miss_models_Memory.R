@@ -5,6 +5,7 @@ suppressPackageStartupMessages({
   library(patchwork)
   library(marginaleffects)
   library(mice)
+  library(clubSandwich)
 })
 
 seed <- 31683
@@ -14,6 +15,8 @@ set.seed(seed)
 theme_set(
   theme_bw(base_size = 14, base_family = "Arimo") +
     theme(
+      plot.title = element_text(size = 15, hjust = 0.5),
+      plot.subtitle = element_text(size = 13, hjust = 0.5),
       axis.text.y = element_text(size = 13, color = "black"),
       axis.text.x = element_text(size = 13, color = "black"),
       legend.text = element_text(size = 14),
@@ -94,7 +97,7 @@ grid_met <- df |>
 pred_met <- marginaleffects::avg_predictions(
   fit_met, 
   newdata = grid_met, 
-  vcov = "HC1"
+  vcov = vcovCR(fit_met, cluster = df$ID, type = "CR0")
 ) |>
   as_tibble()
 
@@ -141,7 +144,10 @@ pred_cc |>
   geom_point(position = pd, color = "white", size = 3) +
   geom_point(position = pd, size = 2) +
   scale_color_manual(values = group_cols) +
-  scale_y_continuous(name = "Memory", n.breaks = 8) 
+  scale_y_continuous(name = "Memory", n.breaks = 8) +
+  labs(
+    title = 'Effects of SGLT2i and GLP1 on memory scores'
+  )
 
 effect_cc |>
   as_tibble() |>
@@ -154,7 +160,10 @@ effect_cc |>
   ) +
   geom_point(color = "white", size = 3) +
   geom_point(size = 2) +
-  scale_y_continuous(name = "SGLT2i − GLP1")
+  scale_y_continuous(name = "SGLT2i − GLP1") +
+  labs(
+    title = 'Comparison effects of SGLT2i and GLP1 \non memory scores'
+  )
 
 ### Difference with Metformin
 pred_cc |>
@@ -167,6 +176,20 @@ pred_cc |>
     conf.low = estimate - (qnorm(0.975) * std.error),
     conf.high = estimate + (qnorm(0.975) * std.error),
     p.value = 2 * pnorm(abs(statistic), lower.tail = FALSE)
+  ) %>% 
+
+  ggplot(aes(time, estimate, group = Treatment, color = Treatment)) +
+  geom_line(linewidth = 0.8, alpha = 0.5) +
+  geom_errorbar(
+    aes(ymin = conf.low, ymax = conf.high),
+    position = pd, linewidth = 0.8, width = 0.1
+  ) +
+  geom_point(position = pd, color = "white", size = 3) +
+  geom_point(position = pd, size = 2) +
+  scale_color_manual(values = group_cols) +
+  scale_y_continuous(name = "SGLT2i/GLP1 - Metformin", n.breaks = 8)+
+  labs(
+    title = 'Comparison effects of SGLT2i and GLP1 \nwith metformin on memory scores'
   )
 
 # MICE --------------------------------------------------------------------
@@ -203,7 +226,7 @@ fits_met <- map(seq_len(m), function(i) {
   marginaleffects::avg_predictions(
     fit, 
     newdata = grid_met, 
-    vcov = "HC1"
+    vcov = vcovCR(fit_met, cluster = df$ID, type = "CR0")
   )
 })
 
@@ -232,11 +255,16 @@ imp_wide <- mice::mice(
     # "HbA1c_12" = HbA1c_12 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + GFR_0 + HbA1c_0 + HbA1c_3 + HbA1c_6 + HbA1c_9)
     
     # Memory_0 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0) + Stroke + Polineuropathy,
-    "BMI_0" = BMI_0 ~ Treatment * (Age + Sex + Hypertension + HbA1c_0 + log_DM_duration + GFR_0) + Stroke + Polineuropathy,
-    "Hypertension" = Hypertension ~ Treatment * (Age + Sex + BMI_0 + HbA1c_0 + log_DM_duration + GFR_0) + Stroke + Polineuropathy,
-    "GFR_0" = GFR_0 ~ Treatment * (Age + Sex + BMI_0 + HbA1c_0 + log_DM_duration + Hypertension) + Stroke + Polineuropathy,
-    "Polineuropathy" = Polineuropathy ~ Treatment * (Age + Sex + BMI_0 + HbA1c_0 + log_DM_duration + Hypertension + GFR_0) + Stroke,
-    "Stroke" = Stroke ~ Treatment * (Age + Sex + BMI_0 + HbA1c_0 + log_DM_duration + Hypertension + GFR_0) + Polineuropathy,
+    "BMI_0" = BMI_0 ~ Treatment * (Age + Sex + Hypertension + HbA1c_0 + log_DM_duration + GFR_0
+                                   + Memory_0 + Memory_3 + Memory_6 + Memory_9 + Memory_12) + Stroke + Polineuropathy,
+    "Hypertension" = Hypertension ~ Treatment * (Age + Sex + BMI_0 + HbA1c_0 + log_DM_duration + GFR_0
+                                                 + Memory_0 + Memory_3 + Memory_6 + Memory_9 + Memory_12) + Stroke + Polineuropathy,
+    "GFR_0" = GFR_0 ~ Treatment * (Age + Sex + BMI_0 + HbA1c_0 + log_DM_duration + Hypertension
+                                   + Memory_0 + Memory_3 + Memory_6 + Memory_9 + Memory_12) + Stroke + Polineuropathy,
+    "Polineuropathy" = Polineuropathy ~ Treatment * (Age + Sex + BMI_0 + HbA1c_0 + log_DM_duration + Hypertension + GFR_0
+                                                     + Memory_0 + Memory_3 + Memory_6 + Memory_9 + Memory_12) + Stroke,
+    "Stroke" = Stroke ~ Treatment * (Age + Sex + BMI_0 + HbA1c_0 + log_DM_duration + Hypertension + GFR_0
+                                     + Memory_0 + Memory_3 + Memory_6 + Memory_9 + Memory_12) + Polineuropathy,
   
     "Memory_0" = Memory_0 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0 + Memory_3 + Memory_6 + Memory_9 + Memory_12),
     "Memory_3" = Memory_3 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0 + Memory_0 + Memory_6 + Memory_9 + Memory_12),
@@ -356,7 +384,11 @@ pred_mice |>
   geom_point(position = pd, color = "white", size = 3) +
   geom_point(position = pd, size = 2) +
   scale_color_manual(values = group_cols) +
-  scale_y_continuous(name = "Memory", n.breaks = 8) 
+  scale_y_continuous(name = "Memory", n.breaks = 8) +
+  labs(
+    title = 'Effects of SGLT2i and GLP1 on memory scores',
+    subtitle = 'after multiple imputation of missing data'
+  )
 
 effect_mice |>
   as_tibble() |>
@@ -369,7 +401,11 @@ effect_mice |>
   ) +
   geom_point(color = "white", size = 3) +
   geom_point(size = 2) +
-  scale_y_continuous(name = "SGLT2i − GLP1")
+  scale_y_continuous(name = "SGLT2i − GLP1") +
+  labs(
+    title = 'Comparison effects of SGLT2i and GLP1 \non memory scores',
+    subtitle = 'after multiple imputation of missing data'
+  )
 
 ### Difference with Metformin
 pred_mice |>
@@ -382,4 +418,19 @@ pred_mice |>
     conf.low = estimate - (qnorm(0.975) * std.error),
     conf.high = estimate + (qnorm(0.975) * std.error),
     p.value = 2 * pnorm(abs(statistic), lower.tail = FALSE)
+  ) %>% 
+  
+  ggplot(aes(time, estimate, group = Treatment, color = Treatment)) +
+  geom_line(linewidth = 0.8, alpha = 0.5) +
+  geom_errorbar(
+    aes(ymin = conf.low, ymax = conf.high),
+    position = pd, linewidth = 0.8, width = 0.1
+  ) +
+  geom_point(position = pd, color = "white", size = 3) +
+  geom_point(position = pd, size = 2) +
+  scale_color_manual(values = group_cols) +
+  scale_y_continuous(name = "SGLT2i/GLP1 - Metformin", n.breaks = 8)+
+  labs(
+    title = 'Comparison effects of SGLT2i and GLP1 \nwith metformin on memory scores',
+    subtitle = 'after multiple imputation of missing data'
   )
