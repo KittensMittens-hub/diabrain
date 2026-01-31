@@ -24,12 +24,13 @@ set.seed(123)
 ```
 
 ```{r}
-base_dagitty <- dagitty( 
-  'dag {
+base_dagitty <- dagitty(
+'dag {
 bb="0,0,1,1"
 Age [pos="0.519,0.146"]
 BMI [pos="0.356,0.759"]
 DM_duration [pos="0.150,0.300"]
+GFR [pos="0.750,0.250"]
 HbA1c [pos="0.293,0.060"]
 Hypertension [pos="0.761,0.083"]
 Markers [outcome,pos="0.673,0.707"]
@@ -38,11 +39,37 @@ Scales [outcome,pos="0.664,0.435"]
 Sex [pos="0.826,0.548"]
 Stroke [pos="0.198,0.514"]
 Treatment [exposure,pos="0.509,0.548"]
+time [pos="0.509,0.648"]
+
+Treatment -> Scales
+Treatment -> Markers
+time -> Scales
+time -> Markers
+Age -> Scales
+Age -> Markers
+Sex -> Scales
+Sex -> Markers
+DM_duration -> Scales
+DM_duration -> Markers
+BMI -> Scales
+BMI -> Markers
+Hypertension -> Scales
+Hypertension -> Markers
+HbA1c -> Scales
+HbA1c -> Markers
+GFR -> Scales
+GFR -> Markers
+Stroke -> Scales
+Stroke -> Markers
+Polineuropathy -> Scales
+Polineuropathy -> Markers
+
 Age -> BMI
 Age -> DM_duration
 Age -> HbA1c
 Age -> Hypertension
 Age -> Stroke
+Age -> GFR
 BMI -> HbA1c
 BMI -> Hypertension
 DM_duration -> HbA1c
@@ -52,16 +79,8 @@ HbA1c -> Polineuropathy
 HbA1c -> Stroke
 HbA1c <-> Hypertension
 Hypertension -> Stroke
-Markers <-> Scales
-Polineuropathy -> Markers
-Polineuropathy -> Scales
-Sex -> Markers
-Sex -> Scales
-Stroke -> Markers
-Stroke -> Scales
+Hypertension -> GFR
 Stroke -> Treatment
-Treatment -> Markers
-Treatment -> Scales
 }
 ')
 ```
