@@ -30,59 +30,56 @@ bb="0,0,1,1"
 Age [pos="0.519,0.146"]
 BMI [pos="0.356,0.759"]
 DM_duration [pos="0.150,0.300"]
-GFR [pos="0.750,0.250"]
+GFR [pos="0.900,0.250"]
 HbA1c [pos="0.293,0.060"]
 Hypertension [pos="0.761,0.083"]
 Markers [outcome,pos="0.673,0.707"]
 Polineuropathy [pos="0.400,0.400"]
 Scales [outcome,pos="0.664,0.435"]
-Sex [pos="0.826,0.548"]
+Sex [pos="0.900,0.435"]
 Stroke [pos="0.198,0.514"]
 Treatment [exposure,pos="0.509,0.548"]
-time [pos="0.509,0.648"]
-
-Treatment -> Scales
-Treatment -> Markers
-time -> Scales
-time -> Markers
-Age -> Scales
-Age -> Markers
-Sex -> Scales
-Sex -> Markers
-DM_duration -> Scales
-DM_duration -> Markers
-BMI -> Scales
-BMI -> Markers
-Hypertension -> Scales
-Hypertension -> Markers
-HbA1c -> Scales
-HbA1c -> Markers
-GFR -> Scales
-GFR -> Markers
-Stroke -> Scales
-Stroke -> Markers
-Polineuropathy -> Scales
-Polineuropathy -> Markers
-
+time [pos="0.513,0.664"]
 Age -> BMI
 Age -> DM_duration
+Age -> GFR
 Age -> HbA1c
 Age -> Hypertension
+Age -> Markers
+Age -> Scales
 Age -> Stroke
-Age -> GFR
 BMI -> HbA1c
 BMI -> Hypertension
+BMI -> Markers
+BMI -> Scales
 DM_duration -> HbA1c
+DM_duration -> Markers
 DM_duration -> Polineuropathy
+DM_duration -> Scales
 DM_duration -> Stroke
+GFR -> Markers
+GFR -> Scales
+HbA1c -> Markers
 HbA1c -> Polineuropathy
+HbA1c -> Scales
 HbA1c -> Stroke
 HbA1c <-> Hypertension
-Hypertension -> Stroke
 Hypertension -> GFR
+Hypertension -> Markers
+Hypertension -> Scales
+Hypertension -> Stroke
+Polineuropathy -> Markers
+Polineuropathy -> Scales
+Sex -> Markers
+Sex -> Scales
+Stroke -> Markers
+Stroke -> Scales
 Stroke -> Treatment
-}
-')
+Treatment -> Markers
+Treatment -> Scales
+time -> Markers
+time -> Scales
+}')
 ```
 
 
@@ -90,7 +87,7 @@ Stroke -> Treatment
 dag_cand3_gg <- base_dagitty %>% 
   tidy_dagitty(layout = "nicely") %>% 
   # указываем что контролируем
-  node_dconnected(controlling_for = c("Age", "Sex", 'Hypertension', 'HbA1c', 'BMI'))
+  node_dconnected(controlling_for = c("Age", "Sex", 'Hypertension', 'HbA1c', 'BMI', 'Polineuropathy', 'Stroke', 'DM_duration', 'time', 'GFR'))
 
 ```
 
@@ -118,12 +115,12 @@ dag_cand3_gg %>%
          label_nudge_y = case_when(
            name == 'Markers' ~ 0.03,
            name == 'Sex' ~ 0.03,
-           name == 'Scales' ~ -0.03,
+           name == 'Scales' ~ 0.05,
            name == 'Hypertension' ~ -0.03,
            name == 'Age' ~ 0.03,
            name == 'Polineuropathy' ~ -0.025,
            name == 'HbA1c' ~ -0.025,
-           name == 'Treatment' ~ 0.045,
+           name == 'Treatment' ~ -0.055,
            name == 'DM_duration' ~ 0.01,
            TRUE ~ 0.02
          )) %>% 
