@@ -377,7 +377,7 @@ pred_mice |>
   scale_color_manual(values = group_cols) +
   scale_y_continuous(name = "NSE level", n.breaks = 8) + 
   labs(
-    title = 'Effects of SGLT2i and GLP1 on NSE levels', 
+    title = 'Effects of SGLT2i and GLP1 on NSE', 
     subtitle = 'after multiple imputation of missing data'
   ) 
 
@@ -395,7 +395,7 @@ effect_mice |>
   geom_point(size = 2) +
   scale_y_continuous(name = "SGLT2i − GLP1") +
   labs(
-    title = 'Comparison effects of SGLT2i and GLP1 on NSE levels', 
+    title = 'Comparison effects of SGLT2i and GLP1 on NSE', 
     subtitle = 'after multiple imputation of missing data'
   ) 
 
@@ -424,7 +424,7 @@ pred_mice |>
   scale_color_manual(values = group_cols) +
   scale_y_continuous(name = "SGLT2i/GLP1 - Metformin", n.breaks = 8)+
   labs(
-    title = 'Comparison effects of SGLT2i and GLP1 \nwith metformin on NSE levels', 
+    title = 'Comparison effects of SGLT2i and GLP1 \nwith metformin on NSE', 
     subtitle = 'after multiple imputation of missing data'
   )
 ```
