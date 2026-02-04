@@ -27,13 +27,14 @@ To evaluate the effect of SGLT2i and GLP-1 RA therapy on functional parameters o
 * Ethics: Approved by the local ethics committee, written informed consent obtained  
 
 ### Data Collection
+Stored at: `clean_data/diabrain.xlsx`
 
 Measurements were obtained at baseline and after 3, 6, 9 and 12 months:
 
 * Cognitive tests: MoCA, MMSE  
 * Laboratory markers: HbA1c, S100 protein, neuron-specific enolase, neurofilament light chains  
 * Clinical variables: age, sex, BMI, hypertension, stroke history, kidney function
-* 
+  
 ## Statistical Methods
 
 ### Descriptive Analysis
