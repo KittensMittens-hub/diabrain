@@ -83,7 +83,7 @@ grid_met <- df |>
   filter(Treatment != "метформин") |> 
   mutate(Treatment = "метформин") 
 
-### "counterfactual" mean
+### "counterfactual" mean 
 pred_met <- marginaleffects::avg_predictions(
   fit_met, 
   newdata = grid_met, 
