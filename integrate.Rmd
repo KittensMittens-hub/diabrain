@@ -19,7 +19,7 @@ library(tidyverse)
 library(naniar)
 library(VIM)
 ```
-# Часть 1  
+# Part 1  
 ```{r}
 data <- read_excel("diabrain.xlsx")
 
@@ -138,9 +138,8 @@ if (length(hrt_index) > 0) {
   data_1 <- data
 }
 ```
-# Часть 2 
+# Part 2 
 ```{r}
-#Замена некорректных значений
 data$`Сardiac ischemia`[data$ID == 152] <- 0
 
 data$Alcohol[data$ID == 205] <- 1
@@ -153,16 +152,12 @@ data$Hypertension[data$ID == 215] <- 1
 
 data$`Hypertension duration`[data$ID %in% c(142, 168)] <- NA
 
-
-#Изменения типов переменных
 data <- data %>% 
   mutate(
     across(c(HRT, Hypertension, `Сardiac ischemia`, Stroke, Polineuropathy, Retinopathy, Smoking, Alcohol, `ACE inhibitors`, ARB, BB, `Calcium channel blockers`, Aspirin, Diuretics, Statin, Anticoagulants), ~as.factor(.)),
     `Hypertension duration` = as.numeric(`Hypertension duration`)
     )
 
-
-#Пропущенные значения длительности гипертонии заменяем на 0 если диагноза гипертонии не стоит
 data <- data %>% 
   mutate(
     `Hypertension duration` = case_when(
@@ -181,31 +176,31 @@ data_2 <- subset(data, select = c("ID", "HRT", "Hypertension",
                                  "Aspirin", "Diuretics", "Statin", 
                                  "Anticoagulants"))
 ```
-# Часть 3 
+# Part 3 
 
 ```{r}
 df_p3 <- read_excel("diabrain.xlsx")
 df_p3 <- df_p3 %>%
-  select(1, 50:71, -65) %>% #столбец 65 странный, удалить?
-  mutate(across(c(2:12, 17:22), ~ round(as.numeric(.), 2)),  # преобразуем переменные в numeric или factor в соответствии со спецификацией
+  select(1, 50:71, -65) %>% 
+  mutate(across(c(2:12, 17:22), ~ round(as.numeric(.), 2)),  
          across(c(13:16), as.factor),
          across(1, as.numeric))
-summary(df_p3) #посмотрим данные
+summary(df_p3) 
 df_p3 <- df_p3 %>%
-  mutate(Height = if_else(Height == 1, NA, Height), # у пациента с номером 215 рост 1, заменяем на NA
-         `BMI 0` = if_else(`BMI 0` == 0, NA, `BMI 0`), # у пациента с номером 215 ИМТ 0, заменяем на NA
+  mutate(Height = if_else(Height == 1, NA, Height), 
+         `BMI 0` = if_else(`BMI 0` == 0, NA, `BMI 0`), 
          `BMI 6` = if_else(`BMI 6` == 0, NA, `BMI 6`),
-         `BMI 12` = if_else(`BMI 12` == 45770, 23.40, `BMI 12`), # значение было записано, как дата, при преобразовании в формат numeric сломалось
-         `Creatinine 6` = if_else(`ID` == 198, 111, `Creatinine 6`), # у пациента 198 есть значения креатинина 1,11, заменяем на 111
-         `GFR 6` = if_else(`ID` == 184, 101, `GFR 6`), # уточнено значение по ПМД
-         `GFR 6` = if_else(`ID` == 198, 68, `GFR 6`), # уточнено значение по ПМД
-         `GFR 12` = if_else(`ID` == 250, NA, `GFR 6`)) # уточнено значение по ПМД
-summary(df_p3) #посмотрим данные еще раз
+         `BMI 12` = if_else(`BMI 12` == 45770, 23.40, `BMI 12`), 
+         `Creatinine 6` = if_else(`ID` == 198, 111, `Creatinine 6`), 
+         `GFR 6` = if_else(`ID` == 184, 101, `GFR 6`),
+         `GFR 6` = if_else(`ID` == 198, 68, `GFR 6`), 
+         `GFR 12` = if_else(`ID` == 250, NA, `GFR 6`)) 
+summary(df_p3) 
 
 #df_p3$ID <- as.numeric(as.character(df_p3$ID))
 ```
 
-# Часть 4 
+# Part 4 
 ```{r}
 file_path <- "diabrain.xlsx"
 df_brain <- read_excel(file_path)
@@ -306,36 +301,36 @@ merged_data <- data_1 %>%
 openxlsx::write.xlsx(merged_data, "~/Desktop/Biostatistics/Project/merged_data.xlsx")
 ```
 
-# Визуализация
+# Visualisation
 
-## Распределение по полу в группах терапии
+## Gender distribution in treatment groups
 
 ```{r}
 ggplot(merged_data, aes(x = Treatment, fill = Sex)) +
   geom_bar(width = 0.5, position = position_dodge(width = 0.6), alpha = 0.6) +
   labs(
-    x = "Группа терапии",
-    y = "Число пациентов",
-    title = "Распределение пациентов по полу в группах терапии") +
-  scale_fill_manual(name   = "Пол",
-                      labels = c("0" = "Женщины",
-                                 "1"   = "Мужчины"),
-                      values = c("0" = "pink",
-                                 "1" = "blue"))+
-  theme_minimal()+
+    x = "Treatment Group",
+    y = "Number of Patients",
+    title = "Distribution of Patients by Sex in Treatment Groups") +
+  scale_fill_manual(name = "Sex",
+                    labels = c("0" = "Female",
+                               "1" = "Male"),
+                    values = c("0" = "pink",
+                               "1" = "blue")) +
+  theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-## Распределение по длительности сахарного диабета в группах терапии
+## Distribution by duration of diabetes mellitus in treatment groups
 ```{r}
 ggplot(merged_data, aes(y = `DM duration`, x = Treatment, fill = Treatment)) +
   geom_boxplot(width = 0.5, alpha = 0.8, color = "gray40", 
                outlier.color = "gray30", outlier.shape = 16) +
   scale_fill_brewer(palette = "Set2") + 
   labs(
-    x = "Группа терапии",
-    y = "Длительность сахарного диабета, лет",
-    title = "Распределение пациентов по длительности сахарного диабета в группах терапии"
+    x = "Treatment Group",
+    y = "Diabetes Duration, years",
+    title = "Distribution of Patients by Diabetes Duration in Treatment Groups"
   ) +
   theme_minimal() +
   theme(
@@ -352,9 +347,9 @@ ggplot(merged_data, aes(y = `Age`, x = Treatment, fill = Treatment)) +
                outlier.color = "gray30", outlier.shape = 16) +
   scale_fill_brewer(palette = "Set2") + 
   labs(
-    x = "Группа терапии",
-    y = "Возраст, лет",
-    title = "Распределение пациентов по возрасту в группах терапии"
+    x = "Treatment Group",
+    y = "Age, years",
+    title = "Distribution of patients by age in treatment groups"
   ) +
   theme_minimal() +
   theme(
@@ -365,7 +360,7 @@ ggplot(merged_data, aes(y = `Age`, x = Treatment, fill = Treatment)) +
   )
 ```
 
-## Гликированный гемоглобин по визитам
+## HbA1c by visits
 
 ```{r}
 HbA1c_long <- merged_data %>%
@@ -379,9 +374,9 @@ HbA1c_long <- merged_data %>%
 ggplot(HbA1c_long, aes(x = month, y = HbA1c)) +
   geom_boxplot() +
   labs(
-    x = "Месяц наблюдения",
-    y = "Гликированный гемоглобин, %",
-    title = "Гликированный гемоглобин по визитам"
+    x = "Month",
+    y = "Glycated hemoglobin, %",
+    title = "Glycated hemoglobin by visit"
   ) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
@@ -391,11 +386,11 @@ ggplot(HbA1c_long, aes(x = month, y = HbA1c)) +
 ggplot(HbA1c_long, aes(x = month, y = HbA1c, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), 
                alpha = 0.8, color = "gray30") +
-  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  scale_fill_brewer(palette = "Set2", name = "Treatment") +
   labs(
-    x = "Месяц наблюдения",
+    x = "Month",
     y = "HbA1c, %",
-    title = "Динамика гликированного гемоглобина по визитам и группам терапии"
+    title = "Dynamics of glycated hemoglobin by visit and treatment group"
   ) +
   theme_minimal() +
   theme(
@@ -423,10 +418,10 @@ ggplot(HbA1c_summary, aes(x = month, y = mean_HbA1c,
   geom_errorbar(aes(ymin = mean_HbA1c - se, ymax = mean_HbA1c + se), 
                 width = 0.1, size = 0.8) +
   labs(
-    x = "Месяц наблюдения",
-    y = "Гликированный гемоглобин, %",
-    title = "Динамика гликированного гемоглобина по визитам",
-    color = "Терапия"
+    x = "Month",
+    y = "HbA1c, %",
+    title = "Dynamics of glycated hemoglobin by visit",
+    color = "Treatment"
   ) +
   theme_bw() +
   theme(
@@ -434,7 +429,7 @@ ggplot(HbA1c_summary, aes(x = month, y = mean_HbA1c,
     legend.position = "bottom"
   )
 ```
-## Нейронспецифическая енолаза (нг/мл) по визитам
+## NSE (ng/ml) by visits
 ```{r}
 NSE_long <- merged_data %>%
   select(Treatment,`NSE 0`, `NSE 3`, `NSE 6`, `NSE 12`) %>% 
@@ -447,9 +442,9 @@ NSE_long <- merged_data %>%
 ggplot(NSE_long, aes(x = month, y = NSE)) +
   geom_boxplot() +
   labs(
-    x = "Месяц наблюдения",
-    y = "NSE, нг/мл",
-    title = "Уровень нейронспецифической енолазы по визитам"
+    x = "Month",
+    y = "NSE, ng/ml",
+    title = "Neuron-specific enolase levels by visit"
   ) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
@@ -459,11 +454,11 @@ ggplot(NSE_long, aes(x = month, y = NSE)) +
 ggplot(NSE_long, aes(x = month, y = NSE, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), 
                alpha = 0.8, color = "gray30") +
-  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  scale_fill_brewer(palette = "Set2", name = "Treatment") +
   labs(
-    x = "Месяц наблюдения",
-    y = "NSE, нг/мл",
-    title = "Уровень нейронспецифической енолазы в группах терапии"
+    x = "Month",
+    y = "NSE, ng/ml",
+    title = "Neuron-specific enolase levels by treatment group"
   ) +
   theme_minimal() +
   theme(
@@ -475,11 +470,11 @@ ggplot(NSE_long, aes(x = month, y = NSE, fill = Treatment)) +
   )
 ```
 
-## Легкие цепи нейрофиламента (нг/мл) по визитам
+## Neurofilament light chains (ng/ml) by visit
 
 ```{r}
 Lchains_long <- merged_data %>%
-  select(Treatment,`Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`) %>% 
+  select(Treatment, `Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`) %>% 
   pivot_longer(cols = c(`Lchains 0`, `Lchains 3`, `Lchains 6`, `Lchains 12`),
                names_to = "month",
                values_to = "Lchains") %>%
@@ -489,9 +484,9 @@ Lchains_long <- merged_data %>%
 ggplot(Lchains_long, aes(x = month, y = Lchains)) +
   geom_boxplot() +
   labs(
-    x = "Месяц наблюдения",
-    y = "ЛЦН, нг/мл",
-    title = "Значения показателя Легкие цепи нейрофиламента по визитам"
+    x = "Month",
+    y = "NfL, ng/ml",
+    title = "Neurofilament light chain values by visit"
   ) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
@@ -501,11 +496,11 @@ ggplot(Lchains_long, aes(x = month, y = Lchains)) +
 ggplot(Lchains_long, aes(x = month, y = Lchains, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), 
                alpha = 0.8, color = "gray30") +
-  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  scale_fill_brewer(palette = "Set2", name = "Treatment") +
   labs(
-    x = "Месяц наблюдения",
-    y = "ЛЦН, нг/мл",
-    title = "Уровень легких цепей нейрофиламента в группах терапии"
+    x = "Observation month",
+    y = "NfL, ng/ml",
+    title = "Neurofilament light chain levels by treatment group"
   ) +
   theme_minimal() +
   theme(
@@ -517,10 +512,10 @@ ggplot(Lchains_long, aes(x = month, y = Lchains, fill = Treatment)) +
   )
 ```
 
-## Белок S 100 (мкг/мл) по визитам
+## Protein S 100 (µg/ml) by visit
 ```{r}
 S100_long <- merged_data %>%
-  select(Treatment,`S100 0`, `S100 3`, `S100 6`, `S100 12`) %>% 
+  select(Treatment, `S100 0`, `S100 3`, `S100 6`, `S100 12`) %>% 
   pivot_longer(cols = c(`S100 0`, `S100 3`, `S100 6`, `S100 12`),
                names_to = "month",
                values_to = "S100") %>%
@@ -530,9 +525,9 @@ S100_long <- merged_data %>%
 ggplot(S100_long, aes(x = month, y = S100)) +
   geom_boxplot() +
   labs(
-    x = "Месяц наблюдения",
-    y = "Белок S 100, мкг/мл",
-    title = "Значения показателя Белок S 100 по визитам"
+    x = "Month",
+    y = "Protein S 100, µg/ml",
+    title = "Protein S 100 values by visit"
   ) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.5))
@@ -541,11 +536,11 @@ ggplot(S100_long, aes(x = month, y = S100)) +
 ggplot(S100_long, aes(x = month, y = S100, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), 
                alpha = 0.8, color = "gray30") +
-  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  scale_fill_brewer(palette = "Set2", name = "Treatment") +
   labs(
-    x = "Месяц наблюдения",
-    y = "S100, мкг/мл",
-    title = "Уровень белка S100 в группах терапии"
+    x = "Observation month",
+    y = "S100, µg/ml",
+    title = "S100 protein levels by treatment group"
   ) +
   theme_minimal() +
   theme(
@@ -557,68 +552,8 @@ ggplot(S100_long, aes(x = month, y = S100, fill = Treatment)) +
   )
 ```
 
-## Общий холестерин (ммоль/л) по визитам
 
-```{r}
-Cholesterol_long <- merged_data %>%
-  select(`Cholesterol 0`, `Cholesterol 6`, `Cholesterol 12`) %>% 
-  pivot_longer(cols = c(`Cholesterol 0`, `Cholesterol 6`, `Cholesterol 12`),
-               names_to = "month",
-               values_to = "Cholesterol") %>%
-  mutate(month = gsub("Cholesterol ", "", month),
-         month = factor(month, levels = c("0", "6", "12")))
-
-ggplot(Cholesterol_long, aes(x = month, y = Cholesterol)) +
-  geom_boxplot() +
-  labs(
-    x = "Месяц наблюдения",
-    y = "Общий холестерин, ммоль/л",
-    title = "Значения показателя Общий холестерин по визитам"
-  ) +
-  theme_bw()+
-  theme(plot.title = element_text(hjust = 0.5))
-```
-## Липопротеины низкой плотности (ммоль/л) по визитам
-```{r}
-LDL_long <- merged_data %>%
-  select(`LDL 0`, `LDL 6`, `LDL 12`) %>% 
-  pivot_longer(cols = c(`LDL 0`, `LDL 6`, `LDL 12`),
-               names_to = "month",
-               values_to = "LDL") %>%
-  mutate(month = gsub("LDL ", "", month),
-         month = factor(month, levels = c("0", "6", "12")))
-
-ggplot(LDL_long, aes(x = month, y = LDL)) +
-  geom_boxplot() +
-  labs(
-    x = "Месяц наблюдения",
-    y = "Липопротеины низкой плотности, ммоль/л",
-    title = "Значения показателя Липопротеины низкой плотности по визитам"
-  ) +
-  theme_bw()+
-  theme(plot.title = element_text(hjust = 0.5))
-```
-## Триглицериды (ммоль/л) по визитам
-```{r}
-TG_long <- merged_data %>%
-  select(`TG 0`, `TG 6`, `TG 12`) %>% 
-  pivot_longer(cols = c(`TG 0`, `TG 6`, `TG 12`),
-               names_to = "month",
-               values_to = "TG") %>%
-  mutate(month = gsub("TG ", "", month),
-         month = factor(month, levels = c("0", "6", "12")))
-
-ggplot(TG_long, aes(x = month, y = TG)) +
-  geom_boxplot() +
-  labs(
-    x = "Месяц наблюдения",
-    y = "Триглицериды, ммоль/л",
-    title = "Значения показателя Триглицериды по визитам"
-  ) +
-  theme_bw()+
-  theme(plot.title = element_text(hjust = 0.5))
-```
-## ИМТ по визитам
+## BMI
 ```{r}
 BMI_long <- merged_data %>%
   select(ID, Treatment, `BMI 0`, `BMI 3`, `BMI 6`, `BMI 9`, `BMI 12`) %>% 
@@ -631,11 +566,11 @@ BMI_long <- merged_data %>%
 ggplot(BMI_long, aes(x = month, y = BMI, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), 
                alpha = 0.8, color = "gray30") +
-  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  scale_fill_brewer(palette = "Set2", name = "Treatment") +
   labs(
-    x = "Месяц наблюдения",
-    y = "ИМТ, кг/м²",
-    title = "Динамика ИМТ по визитам и группам терапии"
+    x = "Observation month",
+    y = "BMI, kg/m²",
+    title = "BMI dynamics by visit and treatment group"
   ) +
   theme_minimal() +
   theme(
@@ -646,7 +581,7 @@ ggplot(BMI_long, aes(x = month, y = BMI, fill = Treatment)) +
     panel.border = element_rect(color = "gray70", fill = NA, size = 0.5)
   )
 ```
-## MOCA по визитам
+## MOCA
 ```{r}
 MOCA_long <- merged_data %>%
   select(Treatment, `MOCA 0`, `MOCA 3`, `MOCA 6`, `MOCA 9`, `MOCA 12`) %>% 
@@ -659,55 +594,17 @@ MOCA_long <- merged_data %>%
 ggplot(MOCA_long, aes(x = month, y = MOCA, fill = Treatment)) +
   geom_boxplot(position = position_dodge(width = 0.8), 
                alpha = 0.8, color = "gray30") +
-  scale_fill_brewer(palette = "Set2", name = "Терапия") +
+  scale_fill_brewer(palette = "Set2", name = "Treatment") +
   labs(
-    x = "Месяц наблюдения",
-    y = "Шкала MOCA, балл",
-    title = "Распределение баллов Монреальской шкалы по визитам в группах терапии"
+    x = "Observation month",
+    y = "MOCA scale, points",
+    title = "Distribution of Montreal Cognitive Assessment scores by visit and treatment group"
   ) +
   theme_bw()+
   theme(plot.title = element_text(hjust = 0.3))
 ```
-## Креатинин по визитам
-```{r}
-creat_long <- merged_data %>%
-  select(`Creatinine 0`, `Creatinine 6`, `Creatinine 12`) %>% 
-  pivot_longer(cols = c(`Creatinine 0`, `Creatinine 6`, `Creatinine 12`),
-               names_to = "month",
-               values_to = "Creatinine") %>%
-  mutate(month = gsub("Creatinine ", "", month),
-         month = factor(month, levels = c("0", "6", "12")))
 
-ggplot(creat_long, aes(x = month, y = Creatinine)) +
-  geom_boxplot() +
-  labs(
-    x = "Месяц наблюдения",
-    y = "Креатинин, мкмоль/л",
-    title = "Распределение креатинина по визитам"
-  ) +
-  theme_bw()+
-  theme(plot.title = element_text(hjust = 0.5))
-```
-## СКФ по визитам
-```{r}
-GFR_long <- merged_data %>%
-  select(`GFR0`, `GFR 6`, `GFR 12`) %>% 
-  pivot_longer(cols = c(`GFR0`, `GFR 6`, `GFR 12`),
-               names_to = "month",
-               values_to = "GFR") %>%
-  mutate(month = gsub("[^0-9]", "", month),
-         month = factor(month, levels = c("0", "6", "12")))
-
-ggplot(GFR_long, aes(x = month, y = GFR)) +
-  geom_boxplot() +
-  labs(
-    x = "Месяц наблюдения",
-    y = "СКФ, кг/м²/1.73",
-    title = "Распределение СКФ по визитам"
-  ) +
-  theme_bw()+
-  theme(plot.title = element_text(hjust = 0.5))
-```
+## Missing data patterns
 ```{r fig.width = 8, fig.height = 10, results='asis'}
 
 data_renamed <- data
@@ -753,15 +650,6 @@ colnames(md_pattern_result)[1:5] <- c("Месяц 0", "Месяц 3", "Меся�
 
 print(md_pattern_result)
 ```
-```{r}
-
-```
-
-```{r}
-install.packages("dagitty")
-library(dagitty)
-library(ggplot2)
-```
 
 ```{r}
 naniar::miss_prop_summary(merged_data)
@@ -777,12 +665,10 @@ mice::md.pattern(merged_data)
 
 ```{r}
 selected_data <- merged_data %>%
-  select(-'Cholesterol 0', -'Cholesterol 6', -'Cholesterol 12', -'LDL 0', - 'LDL 6', -'LDL 12', - 'TG 0', -'TG 6', -'TG 12', -'Kidney disease', -'Kidney disease stage', -'Albuminuria', -'Creatinine 0', -'Creatinine 6', -'Creatinine 12', -'GFR0', -'GFR 6',-'GFR 12', -'Treatment.y', -'Polineuropathy investigator')
+  select(-'Cholesterol 0', -'Cholesterol 6', -'Cholesterol 12', -'LDL 0', - 'LDL 6', -'LDL 12', - 'TG 0', -'TG 6', -'TG 12', -'Kidney disease', -'Kidney disease stage', -'Albuminuria', -'Creatinine 0', -'Creatinine 6', -'Creatinine 12', -'GFR0', -'GFR 6',-'GFR 12', -'Treatment', -'Polineuropathy investigator')
 ```
 
-```{r}
-naniar::mcar_test(selected_data)
-```
+
 
 ```{r}
 naniar::add_any_miss(selected_data) |> 
@@ -804,6 +690,3 @@ imp <- mice(
 imp$predictorMatrix
 imp$method
 ```
-
-
-ооооо
