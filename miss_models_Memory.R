@@ -2,11 +2,10 @@
 # Settings ----------------------------------------------------------------
 suppressPackageStartupMessages({
   library(tidyverse)
-  library(patchwork) 
+  library(patchwork)
   library(marginaleffects)
   library(mice)
   library(clubSandwich)
-  library(geepack)
 })
 
 seed <- 31683
@@ -40,7 +39,7 @@ df <- df |>
     ID, Treatment,
     Age, Sex, `DM duration`, Hypertension,
     `BMI 0`, `GFR0`, `NSE 0`, `Lchains 0`, `S100 0`,`MOCA 0`, `MMSE 0`, `HbA1c 0`,
-    `MMSE 0`, `MMSE 3`, `MMSE 6`, `MMSE 9`, `MMSE 12`,
+    `Memory 0`, `Memory 3`, `Memory 6`, `Memory 9`, `Memory 12`,
     Stroke, Polineuropathy
   ) |> 
   rename(`GFR 0` = `GFR0`) |> 
@@ -59,7 +58,7 @@ df_long <- df |>
   filter(Treatment != "метформин") |> 
   mutate(Treatment = fct_drop(Treatment)) |> 
   pivot_longer(
-    starts_with("MMSE_"),
+    starts_with("Memory_"),
     names_to = "time",
     names_transform = \(x) as.factor(as.integer(str_extract(x, "\\d+$")))
   ) |> 
@@ -80,12 +79,12 @@ df_long_cc <- df_long |>
 #       TRUE ~ Polineuropathy
 #     ) %>% as.factor()
 #   ) 
-
+  
 
 ## Model for Metformin ----
 fit_met <- lm(
   # HbA1c_0 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + GFR_0),
-  MMSE_0 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0) + Stroke + Polineuropathy,
+  Memory_0 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0) + Stroke + Polineuropathy,
   data = df
 )
 
@@ -145,9 +144,9 @@ pred_cc |>
   geom_point(position = pd, color = "white", size = 3) +
   geom_point(position = pd, size = 2) +
   scale_color_manual(values = group_cols) +
-  scale_y_continuous(name = "MMSE", n.breaks = 8) +
+  scale_y_continuous(name = "Memory", n.breaks = 8) +
   labs(
-    title = 'Effects of SGLT2i and GLP1 on MMSE scores'
+    title = 'Effects of SGLT2i and GLP1 on memory scores'
   )
 
 effect_cc |>
@@ -163,7 +162,7 @@ effect_cc |>
   geom_point(size = 2) +
   scale_y_continuous(name = "SGLT2i − GLP1") +
   labs(
-    title = 'Comparison effects of SGLT2i and GLP1 on MMSE scores'
+    title = 'Comparison effects of SGLT2i and GLP1 \non memory scores'
   )
 
 ### Difference with Metformin
@@ -178,7 +177,7 @@ pred_cc |>
     conf.high = estimate + (qnorm(0.975) * std.error),
     p.value = 2 * pnorm(abs(statistic), lower.tail = FALSE)
   ) %>% 
-  
+
   ggplot(aes(time, estimate, group = Treatment, color = Treatment)) +
   geom_line(linewidth = 0.8, alpha = 0.5) +
   geom_errorbar(
@@ -190,7 +189,7 @@ pred_cc |>
   scale_color_manual(values = group_cols) +
   scale_y_continuous(name = "SGLT2i/GLP1 - Metformin", n.breaks = 8)+
   labs(
-    title = 'Comparison effects of SGLT2i and GLP1 \nwith metformin on MMSE scores'
+    title = 'Comparison effects of SGLT2i and GLP1 \nwith metformin on memory scores'
   )
 
 # MICE --------------------------------------------------------------------
@@ -217,7 +216,7 @@ imp_met <- mice::mice(
 fits_met <- map(seq_len(m), function(i) {
   d <- mice::complete(imp_met, i)
   fit <- lm(
-    MMSE_0 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0) + Stroke + Polineuropathy,
+    Memory_0 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0) + Stroke + Polineuropathy,
     data = d
   )
   grid_met <- d |> 
@@ -256,27 +255,22 @@ imp_wide <- mice::mice(
     # "HbA1c_12" = HbA1c_12 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + GFR_0 + HbA1c_0 + HbA1c_3 + HbA1c_6 + HbA1c_9)
     
     # Memory_0 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0) + Stroke + Polineuropathy,
-    "BMI_0" = BMI_0 ~ Treatment * (Age + Sex + Hypertension + HbA1c_0 + log_DM_duration + GFR_0 
-                                   + MMSE_0 + MMSE_3 + MMSE_6 + MMSE_9 + MMSE_12) + Stroke + Polineuropathy,
+    "BMI_0" = BMI_0 ~ Treatment * (Age + Sex + Hypertension + HbA1c_0 + log_DM_duration + GFR_0
+                                   + Memory_0 + Memory_3 + Memory_6 + Memory_9 + Memory_12) + Stroke + Polineuropathy,
     "Hypertension" = Hypertension ~ Treatment * (Age + Sex + BMI_0 + HbA1c_0 + log_DM_duration + GFR_0
-                                                 + MMSE_0 + MMSE_3 + MMSE_6 + MMSE_9 + MMSE_12) + Stroke + Polineuropathy,
+                                                 + Memory_0 + Memory_3 + Memory_6 + Memory_9 + Memory_12) + Stroke + Polineuropathy,
     "GFR_0" = GFR_0 ~ Treatment * (Age + Sex + BMI_0 + HbA1c_0 + log_DM_duration + Hypertension
-                                   + MMSE_0 + MMSE_3 + MMSE_6 + MMSE_9 + MMSE_12) + Stroke + Polineuropathy,
+                                   + Memory_0 + Memory_3 + Memory_6 + Memory_9 + Memory_12) + Stroke + Polineuropathy,
     "Polineuropathy" = Polineuropathy ~ Treatment * (Age + Sex + BMI_0 + HbA1c_0 + log_DM_duration + Hypertension + GFR_0
-                                                     + MMSE_0 + MMSE_3 + MMSE_6 + MMSE_9 + MMSE_12) + Stroke,
+                                                     + Memory_0 + Memory_3 + Memory_6 + Memory_9 + Memory_12) + Stroke,
     "Stroke" = Stroke ~ Treatment * (Age + Sex + BMI_0 + HbA1c_0 + log_DM_duration + Hypertension + GFR_0
-                                     + MMSE_0 + MMSE_3 + MMSE_6 + MMSE_9 + MMSE_12) + Polineuropathy,
-    
-    "MMSE_0" = MMSE_0 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0 
-                                     + MMSE_3 + MMSE_6 + MMSE_9 + MMSE_12) + Stroke + Polineuropathy,
-    "MMSE_3" = MMSE_3 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0 
-                                     + MMSE_0 + MMSE_6 + MMSE_9 + MMSE_12) + Stroke + Polineuropathy,
-    "MMSE_6" = MMSE_6 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0 
-                                     + MMSE_0 + MMSE_3 + MMSE_9 + MMSE_12) + Stroke + Polineuropathy,
-    "MMSE_9" = MMSE_9 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0 
-                                     + MMSE_0 + MMSE_3 + MMSE_6 + MMSE_12) + Stroke + Polineuropathy,
-    "MMSE_12" = MMSE_12 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0 
-                                       + MMSE_0 + MMSE_3 + MMSE_6 + MMSE_9) + Stroke + Polineuropathy
+                                     + Memory_0 + Memory_3 + Memory_6 + Memory_9 + Memory_12) + Polineuropathy,
+  
+    "Memory_0" = Memory_0 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0 + Memory_3 + Memory_6 + Memory_9 + Memory_12),
+    "Memory_3" = Memory_3 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0 + Memory_0 + Memory_6 + Memory_9 + Memory_12),
+    "Memory_6" = Memory_6 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0 + Memory_0 + Memory_3 + Memory_9 + Memory_12),
+    "Memory_9" = Memory_9 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0 + Memory_0 + Memory_3 + Memory_6 + Memory_12),
+    "Memory_12" = Memory_12 ~ Treatment * (Age + Sex + log_DM_duration + BMI_0 + Hypertension + HbA1c_0 + GFR_0 + Memory_0 + Memory_3 + Memory_6 + Memory_9)
   ),
   m = m, maxit = it, seed = seed, 
   printFlag = FALSE
@@ -285,7 +279,7 @@ imp_wide <- mice::mice(
 imp_long <- lapply(seq_len(m), function(i) {
   mice::complete(imp_wide, i) |>
     pivot_longer(
-      starts_with("MMSE_"),
+      starts_with("Memory_"),
       names_to = "time",
       names_transform = \(x) as.factor(as.integer(str_extract(x, "\\d+$")))
     ) |>
@@ -390,11 +384,11 @@ pred_mice |>
   geom_point(position = pd, color = "white", size = 3) +
   geom_point(position = pd, size = 2) +
   scale_color_manual(values = group_cols) +
-  scale_y_continuous(name = "MMSE", n.breaks = 8) +
+  scale_y_continuous(name = "Memory", n.breaks = 8) +
   labs(
-    title = 'Effects of SGLT2i and GLP1 on MMSE scores',
+    title = 'Effects of SGLT2i and GLP1 on memory scores',
     subtitle = 'after multiple imputation of missing data'
-  ) 
+  )
 
 effect_mice |>
   as_tibble() |>
@@ -409,9 +403,9 @@ effect_mice |>
   geom_point(size = 2) +
   scale_y_continuous(name = "SGLT2i − GLP1") +
   labs(
-    title = 'Comparison effects of SGLT2i and GLP1 on MMSE scores',
+    title = 'Comparison effects of SGLT2i and GLP1 \non memory scores',
     subtitle = 'after multiple imputation of missing data'
-  ) 
+  )
 
 ### Difference with Metformin
 pred_mice |>
@@ -424,7 +418,7 @@ pred_mice |>
     conf.low = estimate - (qnorm(0.975) * std.error),
     conf.high = estimate + (qnorm(0.975) * std.error),
     p.value = 2 * pnorm(abs(statistic), lower.tail = FALSE)
-  )%>% 
+  ) %>% 
   
   ggplot(aes(time, estimate, group = Treatment, color = Treatment)) +
   geom_line(linewidth = 0.8, alpha = 0.5) +
@@ -437,6 +431,6 @@ pred_mice |>
   scale_color_manual(values = group_cols) +
   scale_y_continuous(name = "SGLT2i/GLP1 - Metformin", n.breaks = 8)+
   labs(
-    title = 'Comparison effects of SGLT2i and GLP1 \nwith metformin on MMSE scores',
+    title = 'Comparison effects of SGLT2i and GLP1 \nwith metformin on memory scores',
     subtitle = 'after multiple imputation of missing data'
   )
