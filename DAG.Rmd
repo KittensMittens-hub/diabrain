@@ -4,7 +4,7 @@ output:
   html_document:
     number_sections: true
     code_folding: hide
-    toc: true
+    toc: true 
     toc_float: true
 date: "`r Sys.Date()`"
 ---

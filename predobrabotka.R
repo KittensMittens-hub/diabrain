@@ -1,5 +1,5 @@
 library(readxl)
-library(dplyr)
+library(dplyr) 
 library(gtsummary)
 data <- read_excel("diabrain.xlsx")
 

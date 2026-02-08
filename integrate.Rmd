@@ -709,7 +709,7 @@ ggplot(GFR_long, aes(x = month, y = GFR)) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 ```{r fig.width = 8, fig.height = 10, results='asis'}
-
+ 
 data_renamed <- data
 
 colnames(data_renamed)[colnames(data_renamed) == "HbA1c 0"] <- "HbA1c_00"
