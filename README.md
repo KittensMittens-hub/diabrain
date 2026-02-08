@@ -107,6 +107,7 @@ The figure below shows the dynamics of the MoCA scale by groups and visits.
 <img width="577" height="303" alt="Снимок экрана 2026-02-08 в 08 11 56" src="https://github.com/user-attachments/assets/04c9ad2d-1ef5-40e1-932b-1f7077a9a264" />
 
 The figure below shows the dynamics of one of the neuronal damage markers, NSE, by groups and visits.
+
 <img width="576" height="304" alt="Снимок экрана 2026-02-08 в 08 10 17" src="https://github.com/user-attachments/assets/ec6a27c7-e855-4be1-81f1-cd1b5d96dd67" />
 
 
@@ -119,7 +120,7 @@ Results remained consistent after multiple imputation and longitudinal modeling.
 
 The figure below shows comparison effects of SGLT2i and GLP1 on MOCA scores after multiple imputation of missing data. 
 
-  <img width="668" height="668" alt="image" src="https://github.com/user-attachments/assets/3144664b-2122-4e88-ac6e-cae18a2452de" />
+<img width="519" height="348" alt="Снимок экрана 2026-02-08 в 08 39 42" src="https://github.com/user-attachments/assets/06e14b3a-ef5b-493a-a9ec-2c56290dbdbf" />
 
 ### Secondary Endpoints
 
@@ -127,7 +128,10 @@ The figure below shows comparison effects of SGLT2i and GLP1 on MOCA scores afte
   * Neurofilament light chains
   * S100 protein
   * Neuron-specific enolase
-* Correlations between cognitive scores and neuronal injury markers were detected but did not differ systematically between treatment groups.
+ 
+The figure below shows comparison effects of SGLT2i and GLP1 on NSE after multiple imputation of missing data. 
+<img width="531" height="346" alt="Снимок экрана 2026-02-08 в 08 42 31" src="https://github.com/user-attachments/assets/f66bf0dc-3bfc-41d2-824e-465ee0c35aed" />
+
 
 ## Study Limitations
 
