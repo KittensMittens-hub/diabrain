@@ -65,7 +65,9 @@ All analyses were performed in:
 
 ## Analysis pipeline
 *clean_data*: Directory containing data preprocessing code and outputs.
+
 *clean_data.Rmd*: Complete R Markdown notebook with steps for importing, cleaning, handling missing values, and transforming variables from the raw dataset.
+
 *diabrain.rds*: Final, analysis-ready dataset in RDS format (output of clean_data.Rmd). Serves as input for subsequent analysis stages.
 
 *(miss.Rmd)*:
