@@ -21,8 +21,8 @@ To evaluate the effect of SGLT2i and GLP-1 RA therapy on functional parameters o
 ## Study Design and Data Sources
 
 A prospective observational longitudinal cohort study with a 12 month follow-up was conducted in 158 outpatients with type 2 diabetes mellitus attending routine clinical visits. All participants provided written informed consent, and the protocol was approved by the Local Ethics Committee.
-Glucose-lowering therapy with SGLT2i or GLP-1 RAs was initiated according to current clinical guidelines [5]. Patients with target glycated hemoglobin (HbA1c) levels underwent a cross sectional assessment, whereas individuals with non target HbA1c levels were followed longitudinally.
-Clinical evaluation included physical examination and cognitive testing using the Montreal Cognitive Assessment (MoCA) and the Mini Mental State Examination (MMSE) [6, 7]. Laboratory analyses comprised HbA1c and biochemical markers of neuronal damage, including S100 protein, neuron specific enolase, and neurofilament light chains [8, 9, 10]. Measurements were performed at baseline and every three months for up to one year.
+Glucose-lowering therapy with SGLT2i or GLP-1 RAs was initiated according to current clinical guidelines. Patients with target glycated hemoglobin (HbA1c) levels underwent a cross sectional assessment, whereas individuals with non target HbA1c levels were followed longitudinally.
+Clinical evaluation included physical examination and cognitive testing using the Montreal Cognitive Assessment (MoCA) and the Mini Mental State Examination (MMSE). Laboratory analyses comprised HbA1c and biochemical markers of neuronal damage, including S100 protein, neuron specific enolase, and neurofilament light chains. Measurements were performed at baseline and every three months for up to one year.
 
 ### Data Collection
 Stored at: `clean_data/diabrain.xlsx`
@@ -94,12 +94,32 @@ All analyses were performed in:
 
 ## Results
 
+### Baseline Data 
+The study groups (Metformin, n=44; GLP-1 RAs, n=47; SGLT-2i, n=67) were unbalanced at baseline. Mean (SD) age was 60.5 (8.91), 52.4 (7.66), and 59.7 (9.15) years, respectively, with a female proportion of 68%, 64%, and 58%. Mean (SD) HbA1c was 6.3% (0.40), 7.5% (1.43), and 8.2% (1.10); mean (SD) BMI was 32.4 (4.66), 35.6 (5.63), and 32.6 (4.74) kg/m²; and mean (SD) diabetes duration was 7.1 (7.58), 5.0 (3.38), and 5.8 (5.66) years. This imbalance was accounted for in the subsequent statistical modeling.
+
+### Main variables dynamic
+The figure below shows the dynamics of HbA1c levels by visit. As expected, both with SGLT-2 inhibitor therapy and GLP-1 receptor agonist therapy,
+a gradual decrease in glycemia was observed.
+
+<img width="572" height="304" alt="Снимок экрана 2026-02-08 в 08 11 28" src="https://github.com/user-attachments/assets/cf61fbd5-6668-4114-829b-6031b277ce4d" />
+
+The figure below shows the dynamics of the MoCA scale by groups and visits.
+<img width="577" height="303" alt="Снимок экрана 2026-02-08 в 08 11 56" src="https://github.com/user-attachments/assets/04c9ad2d-1ef5-40e1-932b-1f7077a9a264" />
+
+The figure below shows the dynamics of one of the neuronal damage markers, NSE, by groups and visits.
+<img width="576" height="304" alt="Снимок экрана 2026-02-08 в 08 10 17" src="https://github.com/user-attachments/assets/ec6a27c7-e855-4be1-81f1-cd1b5d96dd67" />
+
+
 ### Primary Endpoints
 
-* No sustained difference between SGLT2i and GLP-1 RA groups in MoCA or MMSE scores over 12 months.
-* Transient MoCA differences were observed at months 6 and 9, favoring SGLT2i, but disappeared by month 12.
+For the primary cognitive endpoints, between group differences in  MoCA and MMSE scores varied across follow-up visits and reached statistical significance
+only at selected time points. At 6 and 9 months, the estimated between group difference in MoCA favored SGLT2i therapy (+1.64 points, 95% CI: 0.87− 2.42 and
++3.33 points, 95% CI: 1.67−4.99, respectively); however, no significant difference was observed at 12 months (−0.36 points, 95% CI: −1.29−0.58).
+Results remained consistent after multiple imputation and longitudinal modeling.
+
+The figure below shows comparison effects of SGLT2i and GLP1 on MOCA scores after multiple imputation of missing data. 
+
   <img width="668" height="668" alt="image" src="https://github.com/user-attachments/assets/3144664b-2122-4e88-ac6e-cae18a2452de" />
-* Results remained consistent after multiple imputation and longitudinal modeling.
 
 ### Secondary Endpoints
 
@@ -109,7 +129,6 @@ All analyses were performed in:
   * Neuron-specific enolase
 * Correlations between cognitive scores and neuronal injury markers were detected but did not differ systematically between treatment groups.
 
-
 ## Study Limitations
 
 1. Non-randomized design  
@@ -118,7 +137,6 @@ All analyses were performed in:
 4. Residual confounding  
 5. Short follow-up period  
 6. Sensitivity to model misspecification  
-
 
 ## Conclusions
 
