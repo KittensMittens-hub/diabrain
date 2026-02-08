@@ -561,7 +561,7 @@ data_long <- selected_data %>%
 #data_long$time <- as.numeric(data_long$time)
 ```
 
-## Тема и стандарные блоки
+## Settings
 
 ```{r custom_theme_set}
 theme_custom <- theme(
